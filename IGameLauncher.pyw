@@ -1,8 +1,10 @@
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
+from PIL import Image  # image processing
 import functools  # tool to represent functions with arguments
 import os  # os interaction
 import glob  # file listing
+import time  # delay and time
 import sys  # system functions
 import json  # handle json data
 from tkinter import filedialog  # file choosing ui
@@ -39,6 +41,9 @@ class IGameLauncher(Qt.QMainWindow):
             self.exeButton = Qt.QPushButton(text="Select game executable")
             self.mainLayout.addWidget(self.exeButton)
 
+            self.bannerButton = Qt.QPushButton(text="Select game banner")
+            self.mainLayout.addWidget(self.bannerButton)
+
             self.validationWidget = Qt.QWidget()
             self.validationLayout = Qt.QHBoxLayout()
             self.validationWidget.setLayout(self.validationLayout)
@@ -52,8 +57,12 @@ class IGameLauncher(Qt.QMainWindow):
         
         def setup(self):
             """Setup every widget"""
+            self.nameInput.editingFinished.connect(self.updateName)
             self.folderButton.clicked.connect(self.selectFolder)
             self.exeButton.clicked.connect(self.selectExe)
+            self.bannerButton.clicked.connect(self.askBanner)
+            self.cancelButton.clicked.connect(self.close)
+            self.doneButton.clicked.connect(self.close)
         
         def selectFolder(self):
             """Select the game folder"""
@@ -63,14 +72,47 @@ class IGameLauncher(Qt.QMainWindow):
 
         def selectExe(self):
             """Select the game executable"""
-            exePath = filedialog.askopenfile(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
-            if exePath:
-                self.exePath = exePath
+            exeFile = filedialog.askopenfile(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            if exeFile:
+                exePath = exeFile.name
+                exeFile.close()
+                self.data["exe"] = exePath
+        
+        def updateName(self):
+            """Updates the game name"""
+            newGameName = self.nameInput.text()
+            if os.path.exists(f"banners\\{self.gameName}.png"):
+                os.rename(f"banners\\{self.gameName}.png", f"banners\\{newGameName}.png")
+            self.gameName = newGameName
+        
+        def askBanner(self):
+            """Asks for an image file as a banner"""
+            bannerFile = filedialog.askopenfile(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            if bannerFile:
+                self.bannerPath = bannerFile.name
+                bannerFile.close()
+                # cropping the banner image
+                bannerImage = Image.open(self.bannerPath)
+                width, height = bannerImage.size
+                currentRatio = width / height
+                ratio = IGameLauncher.GameTile.ratio
+                if currentRatio > ratio:
+                    newWidth = round(height * ratio)
+                    left = (width - newWidth) // 2
+                    right = left + newWidth
+                    bannerImage = bannerImage.crop((left, 0, right, height))
+                elif currentRatio < ratio:
+                    newHeight = round(width / ratio)
+                    top = (height - newHeight) // 2
+                    bottom = top + newHeight
+                    bannerImage = bannerImage.crop((0, top, width, bottom))
+                bannerImage.save(f"banners\\{self.gameName}.png")
     
 
     class GameTile(Qt.QWidget):
         """Object that represents a tile to display the game"""
         size = (240, 350)
+        ratio = size[0]/size[1]
 
         def __init__(self, gameName:str, gameSettings:dict):
             """Builds a tile for a given game"""
@@ -95,7 +137,7 @@ class IGameLauncher(Qt.QMainWindow):
             if os.path.exists(f"banners\\{self.gameName}.png"):
                 self.icon = QtGui.QIcon(f"banners\\{self.gameName}.png")
                 self.bannerButton.setIcon(self.icon)
-                self.bannerButton.setIconSize(QtCore.QSize(self.size[0], self.size[1]))
+                self.bannerButton.setIconSize(QtCore.QSize(self.size[0]-6, self.size[1]-6))
             self.mainLayout.addWidget(self.bannerButton)
 
             self.playButton = Qt.QPushButton(text="PLAY")
@@ -117,26 +159,23 @@ class IGameLauncher(Qt.QMainWindow):
         """Reads the session data, or creates an empty file"""
         if not os.path.exists("data.json"):
             with open("data.json", "w", encoding="utf-8") as dataFile:
-                #json.dump({}, dataFile, indent=4)
-                test = {"Starfield":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\Starfield", "exe":"Starfield.exe"},
-                        "No Man's Sky":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky", "exe":"Binaries\\NMS.exe"},
-                        "FNAF Security Breach":{"folder":"D:\\Ilwan\\Logiciels\\FNAF Security Breach", "exe":"fnaf9.exe"},
-                        "Geometry Dash":{"folder":"D:\\Ilwan\\Logiciels\\Geometry Dash", "exe":"GeometryDash.exe"},
-                        "House Flipper":{"folder":"D:\\Ilwan\\Logiciels\\House Flipper", "exe":"HouseFlipper.exe"},
-                        "PC Building Simulator 2":{"folder":"D:\\Ilwan\\Logiciels\\PC Building Simulator 2", "exe":"PCBS2.exe"},
-                        "Subnautica Below Zero":{"folder":"D:\\Ilwan\\Logiciels\\Subnautica Below Zero", "exe":"SubnauticaZero.exe"}}
-                json.dump(test, dataFile, indent=4)
+                json.dump({}, dataFile, indent=4)
         with open("data.json", "r", encoding="utf-8") as dataFile:
             self.data = json.load(dataFile)
     
-    def reload(self, firstLoad=False):
+    def writeData(self):
+        """Completely overwrite the data in the json file"""
+        with open("data.json", "w", encoding="utf-8") as dataFile:
+            json.dump(self.data, dataFile, indent=4)
+    
+    def reload(self, firstLoad:bool=False):
         """reloads the whole interface with current settigns"""
         if not firstLoad:
             self.clear(self.scrollLayout)
         self.buildUi()
         self.setup()
     
-    def clear(self, layout):
+    def clear(self, layout:Qt.QLayout):
         """clear the whole layout"""
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)  # delete widget
@@ -179,14 +218,15 @@ class IGameLauncher(Qt.QMainWindow):
     def setup(self):
         """Setup all the functions to interract with the UI"""
         for game, tile in self.tiles.items():
-            tile.playButton.clicked.connect(functools.partial(self.launchGame, f"{tile.gameSettings['folder']}\\{tile.gameSettings['exe']}"))
+            tile.playButton.clicked.connect(functools.partial(self.launchGame, tile.gameSettings["exe"]))
         self.addButton.clicked.connect(self.askGame)
     
     def launchGame(self, exePath:str):
         """Launches the given exe file"""
         if exePath:
             currentDir = os.getcwd()
-            os.chdir("\\".join(exePath.split("\\")[:-1]))
+            folderToMove = "\\".join(exePath.replace("/", "\\").split("\\")[:-1])
+            os.chdir(folderToMove)
             os.startfile(exePath)
             os.chdir(currentDir)
     
@@ -195,9 +235,13 @@ class IGameLauncher(Qt.QMainWindow):
         self.askPopup = self.AddPopup()
         self.askPopup.doneButton.clicked.connect(lambda: self.addGame(self.askPopup.gameName, self.askPopup.data))
 
-    def addGame(self, name, data):
+    def addGame(self, name:str, data:dict):
         """Adds a new game to the library"""
-        pass
+        data["exe"].replace("/", "\\")
+        data["folder"].replace("/", "\\")
+        self.data[name] = data
+        self.writeData()
+        self.reload()
 
 
 if __name__ == "__main__":  # if the file is executed directly
