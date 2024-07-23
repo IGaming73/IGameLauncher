@@ -6,29 +6,5 @@
     "No Man's Sky": {
         "folder": "C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky",
         "exe": "C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky\\Binaries\\NMS.exe"
-    },
-    "FNAF Security Breach": {
-        "folder": "D:\\Ilwan\\Logiciels\\FNAF Security Breach",
-        "exe": "D:\\Ilwan\\Logiciels\\FNAF Security Breach\\fnaf9.exe"
-    },
-    "Geometry Dash": {
-        "folder": "D:\\Ilwan\\Logiciels\\Geometry Dash",
-        "exe": "D:\\Ilwan\\Logiciels\\Geometry Dash\\GeometryDash.exe"
-    },
-    "House Flipper": {
-        "folder": "D:\\Ilwan\\Logiciels\\House Flipper",
-        "exe": "D:\\Ilwan\\Logiciels\\House Flipper\\HouseFlipper.exe"
-    },
-    "PC Building Simulator 2": {
-        "folder": "D:\\Ilwan\\Logiciels\\PC Building Simulator 2",
-        "exe": "D:\\Ilwan\\Logiciels\\PC Building Simulator 2\\Launcher.bat"
-    },
-    "Subnautica Below Zero": {
-        "folder": "D:\\Ilwan\\Logiciels\\Subnautica Below Zero",
-        "exe": "D:\\Ilwan\\Logiciels\\Subnautica Below Zero\\SubnauticaZero.exe"
-    },
-    "ChroMapper": {
-        "folder": "D:/Ilwan/Logiciels/ChroMapper",
-        "exe": "D:/Ilwan/Logiciels/ChroMapper/CML.exe"
     }
 }

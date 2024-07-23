@@ -14,7 +14,7 @@ class IGameLauncher(Qt.QMainWindow):
     """Main UI for the game launcher app"""
 
     class AddPopup(Qt.QWidget):
-        """A popup window"""
+        """A popup window to add a game"""
 
         def __init__(self):
             super().__init__()
@@ -35,14 +35,41 @@ class IGameLauncher(Qt.QMainWindow):
             self.nameInput.setPlaceholderText("Enter game name")
             self.mainLayout.addWidget(self.nameInput)
 
+            self.folderWidget = Qt.QWidget()
+            self.folderLayout = Qt.QHBoxLayout()
+            self.folderWidget.setLayout(self.folderLayout)
+            self.mainLayout.addWidget(self.folderWidget)
+
             self.folderButton = Qt.QPushButton(text="Select game folder")
-            self.mainLayout.addWidget(self.folderButton)
+            self.folderLayout.addWidget(self.folderButton)
+            
+            self.folderLabel = Qt.QLabel()
+            self.folderLabel.setWordWrap(True)
+            self.folderLayout.addWidget(self.folderLabel)
+
+            self.exeWidget = Qt.QWidget()
+            self.exeLayout = Qt.QHBoxLayout()
+            self.exeWidget.setLayout(self.exeLayout)
+            self.mainLayout.addWidget(self.exeWidget)
 
             self.exeButton = Qt.QPushButton(text="Select game executable")
-            self.mainLayout.addWidget(self.exeButton)
+            self.exeLayout.addWidget(self.exeButton)
+
+            self.exeLabel = Qt.QLabel()
+            self.exeLabel.setWordWrap(True)
+            self.exeLayout.addWidget(self.exeLabel)
+
+            self.bannerWidget = Qt.QWidget()
+            self.bannerLayout = Qt.QHBoxLayout()
+            self.bannerWidget.setLayout(self.bannerLayout)
+            self.mainLayout.addWidget(self.bannerWidget)
 
             self.bannerButton = Qt.QPushButton(text="Select game banner")
-            self.mainLayout.addWidget(self.bannerButton)
+            self.bannerLayout.addWidget(self.bannerButton)
+
+            self.bannerLabel = Qt.QLabel()
+            self.bannerLabel.setWordWrap(True)
+            self.bannerLayout.addWidget(self.bannerLabel)
 
             self.validationWidget = Qt.QWidget()
             self.validationLayout = Qt.QHBoxLayout()
@@ -68,7 +95,8 @@ class IGameLauncher(Qt.QMainWindow):
             """Select the game folder"""
             folderPath = filedialog.askdirectory(title="Select game folder")
             if folderPath:
-                self.data["folder"] = folderPath
+                self.data["folder"] = folderPath.replace("/", "\\")
+                self.folderLabel.setText(folderPath.replace("/", "\\").split("\\")[-1])
 
         def selectExe(self):
             """Select the game executable"""
@@ -76,7 +104,8 @@ class IGameLauncher(Qt.QMainWindow):
             if exeFile:
                 exePath = exeFile.name
                 exeFile.close()
-                self.data["exe"] = exePath
+                self.data["exe"] = exePath.replace("/", "\\")
+                self.exeLabel.setText(exePath.replace("/", "\\").split("\\")[-1])
         
         def updateName(self):
             """Updates the game name"""
@@ -91,6 +120,7 @@ class IGameLauncher(Qt.QMainWindow):
             if bannerFile:
                 self.bannerPath = bannerFile.name
                 bannerFile.close()
+                self.bannerLabel.setText(self.bannerPath.replace("/", "\\").split("\\")[-1])
                 # cropping the banner image
                 bannerImage = Image.open(self.bannerPath)
                 width, height = bannerImage.size
@@ -129,6 +159,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.nameLabel = Qt.QLabel(text=self.gameName)
             self.nameLabel.setAlignment(QtCore.Qt.AlignCenter)
             self.nameLabel.setFont(QtGui.QFont("Arial", 20))
+            self.nameLabel.setFixedHeight(100)
             self.nameLabel.setWordWrap(True)
             self.mainLayout.addWidget(self.nameLabel)
 
@@ -237,8 +268,6 @@ class IGameLauncher(Qt.QMainWindow):
 
     def addGame(self, name:str, data:dict):
         """Adds a new game to the library"""
-        data["exe"].replace("/", "\\")
-        data["folder"].replace("/", "\\")
         self.data[name] = data
         self.writeData()
         self.reload()
