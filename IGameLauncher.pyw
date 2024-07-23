@@ -11,6 +11,63 @@ from tkinter import filedialog  # file choosing ui
 class IGameLauncher(Qt.QMainWindow):
     """Main UI for the game launcher app"""
 
+    class AddPopup(Qt.QWidget):
+        """A popup window"""
+
+        def __init__(self):
+            super().__init__()
+            self.gameName = "Unnamed"
+            self.data = {"folder": None, "exe": None}
+            self.setWindowTitle("Add game")
+            self.build()  # build the widgets
+            self.setup()
+            self.show()
+        
+        def build(self):
+            """Build the widgets"""
+            self.setFont(QtGui.QFont("Arial", 16))
+            self.mainLayout = Qt.QVBoxLayout()
+            self.setLayout(self.mainLayout)
+
+            self.nameInput = Qt.QLineEdit()
+            self.nameInput.setPlaceholderText("Enter game name")
+            self.mainLayout.addWidget(self.nameInput)
+
+            self.folderButton = Qt.QPushButton(text="Select game folder")
+            self.mainLayout.addWidget(self.folderButton)
+
+            self.exeButton = Qt.QPushButton(text="Select game executable")
+            self.mainLayout.addWidget(self.exeButton)
+
+            self.validationWidget = Qt.QWidget()
+            self.validationLayout = Qt.QHBoxLayout()
+            self.validationWidget.setLayout(self.validationLayout)
+            self.mainLayout.addWidget(self.validationWidget)
+
+            self.doneButton = Qt.QPushButton(text="Done")
+            self.validationLayout.addWidget(self.doneButton)
+
+            self.cancelButton = Qt.QPushButton(text="Cancel")
+            self.validationLayout.addWidget(self.cancelButton)
+        
+        def setup(self):
+            """Setup every widget"""
+            self.folderButton.clicked.connect(self.selectFolder)
+            self.exeButton.clicked.connect(self.selectExe)
+        
+        def selectFolder(self):
+            """Select the game folder"""
+            folderPath = filedialog.askdirectory(title="Select game folder")
+            if folderPath:
+                self.data["folder"] = folderPath
+
+        def selectExe(self):
+            """Select the game executable"""
+            exePath = filedialog.askopenfile(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            if exePath:
+                self.exePath = exePath
+    
+
     class GameTile(Qt.QWidget):
         """Object that represents a tile to display the game"""
         size = (240, 350)
@@ -52,8 +109,7 @@ class IGameLauncher(Qt.QMainWindow):
         super().__init__()  # initialise the UI
         self.setWindowTitle("IGameLauncher")
         self.readData()  # get the session data
-        self.buildUi()  # build the UI elements
-        self.setup()  # setup all the functions to interract with widgets
+        self.reload(firstLoad=True)  # load the UI
         self.showMaximized()  # maximize the window
         self.show()  # display the UI
     
@@ -72,6 +128,18 @@ class IGameLauncher(Qt.QMainWindow):
                 json.dump(test, dataFile, indent=4)
         with open("data.json", "r", encoding="utf-8") as dataFile:
             self.data = json.load(dataFile)
+    
+    def reload(self, firstLoad=False):
+        """reloads the whole interface with current settigns"""
+        if not firstLoad:
+            self.clear(self.scrollLayout)
+        self.buildUi()
+        self.setup()
+    
+    def clear(self, layout):
+        """clear the whole layout"""
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)  # delete widget
     
     def buildUi(self):
         """build the UI elements"""
@@ -112,14 +180,25 @@ class IGameLauncher(Qt.QMainWindow):
         """Setup all the functions to interract with the UI"""
         for game, tile in self.tiles.items():
             tile.playButton.clicked.connect(functools.partial(self.launchGame, f"{tile.gameSettings['folder']}\\{tile.gameSettings['exe']}"))
+        self.addButton.clicked.connect(self.askGame)
     
     def launchGame(self, exePath:str):
         """Launches the given exe file"""
-        currentDir = os.getcwd()
-        os.chdir("\\".join(exePath.split("\\")[:-1]))
-        os.startfile(exePath)
-        os.chdir(currentDir)
-            
+        if exePath:
+            currentDir = os.getcwd()
+            os.chdir("\\".join(exePath.split("\\")[:-1]))
+            os.startfile(exePath)
+            os.chdir(currentDir)
+    
+    def askGame(self):
+        """Asks to add a new game"""
+        self.askPopup = self.AddPopup()
+        self.askPopup.doneButton.clicked.connect(lambda: self.addGame(self.askPopup.gameName, self.askPopup.data))
+
+    def addGame(self, name, data):
+        """Adds a new game to the library"""
+        pass
+
 
 if __name__ == "__main__":  # if the file is executed directly
     # scale dpi
