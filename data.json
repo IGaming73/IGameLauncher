@@ -1,1 +1,14 @@
-{}
+{
+    "Beat Saber": {
+        "folder": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber",
+        "exe": "Beat Saber.exe"
+    },
+    "Starfield": {
+        "folder": "C:\\Users\\ilwan\\Documents\\Logiciels\\Starfield",
+        "exe": "Starfield.exe"
+    },
+    "No Man's Sky": {
+        "folder": "C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky",
+        "exe": "Binaries\\NMS.exe"
+    }
+}
