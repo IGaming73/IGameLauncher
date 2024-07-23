@@ -1,5 +1,6 @@
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
+import functools  # tool to represent functions with arguments
 import os  # os interaction
 import glob  # file listing
 import sys  # system functions
@@ -12,13 +13,13 @@ class IGameLauncher(Qt.QMainWindow):
 
     class GameTile(Qt.QWidget):
         """Object that represents a tile to display the game"""
+        size = (240, 350)
 
-        def __init__(self, gameName:str, gameSettings:list):
+        def __init__(self, gameName:str, gameSettings:dict):
             """Builds a tile for a given game"""
             super().__init__()
             self.gameName = gameName
             self.gameSettings = gameSettings
-            self.size = (240, 350)
             self.build()
         
         def build(self):
@@ -42,6 +43,7 @@ class IGameLauncher(Qt.QMainWindow):
 
             self.playButton = Qt.QPushButton(text="PLAY")
             self.playButton.setFont(QtGui.QFont("Arial", 24))
+            self.playButton.setFixedHeight(60)
             self.mainLayout.addWidget(self.playButton)
 
 
@@ -51,6 +53,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.setWindowTitle("IGameLauncher")
         self.readData()  # get the session data
         self.buildUi()  # build the UI elements
+        self.setup()  # setup all the functions to interract with widgets
         self.showMaximized()  # maximize the window
         self.show()  # display the UI
     
@@ -59,31 +62,63 @@ class IGameLauncher(Qt.QMainWindow):
         if not os.path.exists("data.json"):
             with open("data.json", "w", encoding="utf-8") as dataFile:
                 #json.dump({}, dataFile, indent=4)
-                test = {"Beat Saber":{"folder":"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber", "exe":"Beat Saber.exe"},
-                        "Starfield":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\Starfield", "exe":"Starfield.exe"},
-                        "No Man's Sky":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky", "exe":"Binaries\\NMS.exe"}}
+                test = {"Starfield":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\Starfield", "exe":"Starfield.exe"},
+                        "No Man's Sky":{"folder":"C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky", "exe":"Binaries\\NMS.exe"},
+                        "FNAF Security Breach":{"folder":"D:\\Ilwan\\Logiciels\\FNAF Security Breach", "exe":"fnaf9.exe"},
+                        "Geometry Dash":{"folder":"D:\\Ilwan\\Logiciels\\Geometry Dash", "exe":"GeometryDash.exe"},
+                        "House Flipper":{"folder":"D:\\Ilwan\\Logiciels\\House Flipper", "exe":"HouseFlipper.exe"},
+                        "PC Building Simulator 2":{"folder":"D:\\Ilwan\\Logiciels\\PC Building Simulator 2", "exe":"PCBS2.exe"},
+                        "Subnautica Below Zero":{"folder":"D:\\Ilwan\\Logiciels\\Subnautica Below Zero", "exe":"SubnauticaZero.exe"}}
                 json.dump(test, dataFile, indent=4)
         with open("data.json", "r", encoding="utf-8") as dataFile:
             self.data = json.load(dataFile)
     
     def buildUi(self):
         """build the UI elements"""
-        self.centralWidget = Qt.QWidget()
-        self.setCentralWidget(self.centralWidget)
-        self.mainLayout = Qt.QGridLayout(self.centralWidget)
         self.nbColumns = 5  # number of columns for the tiles
         self.currentLine, self.currentColumn = 0, 0
         self.tiles = {}
+
+        self.centralWidget = Qt.QWidget()
+        self.setCentralWidget(self.centralWidget)
+        self.mainLayout = Qt.QVBoxLayout(self.centralWidget)
+
+        self.scrollZone = Qt.QScrollArea()
+        self.scrollZone.setWidgetResizable(True)
+        self.scrollZone.setStyleSheet("QScrollArea { border: none; }")
+        self.scrollInnerWidget = Qt.QWidget()
+        self.scrollLayout = Qt.QGridLayout()
+        self.scrollZone.setWidget(self.scrollInnerWidget)
+        self.scrollInnerWidget.setLayout(self.scrollLayout)
+        self.mainLayout.addWidget(self.scrollZone)
         
         for game, settings in self.data.items():
             # creates and add the tiles
+            tile = self.GameTile(game, settings)
+            self.tiles[game] = tile
+            self.scrollLayout.addWidget(tile, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
+
             self.currentColumn += 1
             if self.currentColumn >= self.nbColumns:  # check if we need to change line
                 self.currentColumn = 0
                 self.currentLine += 1
-            tile = self.GameTile(game, settings)
-            self.tiles[game] = tile
-            self.mainLayout.addWidget(tile, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
+        self.addButton = Qt.QPushButton()
+        self.addButton.setFixedSize(150, 150)
+        self.addButton.setIcon(QtGui.QIcon("assets\\add.png"))
+        self.addButton.setIconSize(QtCore.QSize(130, 130))
+        self.scrollLayout.addWidget(self.addButton, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
+    
+    def setup(self):
+        """Setup all the functions to interract with the UI"""
+        for game, tile in self.tiles.items():
+            tile.playButton.clicked.connect(functools.partial(self.launchGame, f"{tile.gameSettings['folder']}\\{tile.gameSettings['exe']}"))
+    
+    def launchGame(self, exePath:str):
+        """Launches the given exe file"""
+        currentDir = os.getcwd()
+        os.chdir("\\".join(exePath.split("\\")[:-1]))
+        os.startfile(exePath)
+        os.chdir(currentDir)
             
 
 if __name__ == "__main__":  # if the file is executed directly

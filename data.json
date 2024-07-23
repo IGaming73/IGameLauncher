@@ -1,8 +1,4 @@
 {
-    "Beat Saber": {
-        "folder": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber",
-        "exe": "Beat Saber.exe"
-    },
     "Starfield": {
         "folder": "C:\\Users\\ilwan\\Documents\\Logiciels\\Starfield",
         "exe": "Starfield.exe"
@@ -10,5 +6,25 @@
     "No Man's Sky": {
         "folder": "C:\\Users\\ilwan\\Documents\\Logiciels\\No Man's Sky",
         "exe": "Binaries\\NMS.exe"
+    },
+    "FNAF Security Breach": {
+        "folder": "D:\\Ilwan\\Logiciels\\FNAF Security Breach",
+        "exe": "fnaf9.exe"
+    },
+    "Geometry Dash": {
+        "folder": "D:\\Ilwan\\Logiciels\\Geometry Dash",
+        "exe": "GeometryDash.exe"
+    },
+    "House Flipper": {
+        "folder": "D:\\Ilwan\\Logiciels\\House Flipper",
+        "exe": "HouseFlipper.exe"
+    },
+    "PC Building Simulator 2": {
+        "folder": "D:\\Ilwan\\Logiciels\\PC Building Simulator 2",
+        "exe": "PCBS2.exe"
+    },
+    "Subnautica Below Zero": {
+        "folder": "D:\\Ilwan\\Logiciels\\Subnautica Below Zero",
+        "exe": "SubnauticaZero.exe"
     }
 }
