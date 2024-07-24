@@ -44,7 +44,6 @@ class IGameLauncher(Qt.QMainWindow):
             self.folderLayout.addWidget(self.folderButton)
             
             self.folderLabel = Qt.QLabel()
-            self.folderLabel.setWordWrap(True)
             self.folderLayout.addWidget(self.folderLabel)
 
             self.exeWidget = Qt.QWidget()
@@ -56,7 +55,6 @@ class IGameLauncher(Qt.QMainWindow):
             self.exeLayout.addWidget(self.exeButton)
 
             self.exeLabel = Qt.QLabel()
-            self.exeLabel.setWordWrap(True)
             self.exeLayout.addWidget(self.exeLabel)
 
             self.bannerWidget = Qt.QWidget()
@@ -68,7 +66,6 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerLayout.addWidget(self.bannerButton)
 
             self.bannerLabel = Qt.QLabel()
-            self.bannerLabel.setWordWrap(True)
             self.bannerLayout.addWidget(self.bannerLabel)
 
             self.validationWidget = Qt.QWidget()
@@ -89,14 +86,18 @@ class IGameLauncher(Qt.QMainWindow):
             self.exeButton.clicked.connect(self.selectExe)
             self.bannerButton.clicked.connect(self.askBanner)
             self.cancelButton.clicked.connect(self.close)
-            self.doneButton.clicked.connect(self.close)
+            self.doneButton.clicked.connect(self.done)
         
         def selectFolder(self):
             """Select the game folder"""
             folderPath = filedialog.askdirectory(title="Select game folder")
             if folderPath:
                 self.data["folder"] = folderPath.replace("/", "\\")
-                self.folderLabel.setText(folderPath.replace("/", "\\").split("\\")[-1])
+                folderName = folderPath.replace("/", "\\").split("\\")[-1]
+                self.folderLabel.setText(folderName)
+                if self.gameName == "Unnamed":
+                    self.nameInput.setText(folderName)
+                    self.updateName()
 
         def selectExe(self):
             """Select the game executable"""
@@ -110,8 +111,6 @@ class IGameLauncher(Qt.QMainWindow):
         def updateName(self):
             """Updates the game name"""
             newGameName = self.nameInput.text()
-            if os.path.exists(f"banners\\{self.gameName}.png"):
-                os.rename(f"banners\\{self.gameName}.png", f"banners\\{newGameName}.png")
             self.gameName = newGameName
         
         def askBanner(self):
@@ -136,7 +135,13 @@ class IGameLauncher(Qt.QMainWindow):
                     top = (height - newHeight) // 2
                     bottom = top + newHeight
                     bannerImage = bannerImage.crop((0, top, width, bottom))
-                bannerImage.save(f"banners\\{self.gameName}.png")
+                bannerImage.save(f"banners\\banner.png")
+        
+        def done(self):
+            """When the done button is clicked"""
+            if os.path.exists(f"banners\\banner.png"):
+                os.rename(f"banners\\banner.png", f"banners\\{self.gameName}.png")
+            self.close()
     
 
     class GameTile(Qt.QWidget):
@@ -167,8 +172,10 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerButton.setFixedSize(self.size[0], self.size[1])
             if os.path.exists(f"banners\\{self.gameName}.png"):
                 self.icon = QtGui.QIcon(f"banners\\{self.gameName}.png")
-                self.bannerButton.setIcon(self.icon)
-                self.bannerButton.setIconSize(QtCore.QSize(self.size[0]-6, self.size[1]-6))
+            else:
+                self.icon = QtGui.QIcon("assets\\banner.png")
+            self.bannerButton.setIcon(self.icon)
+            self.bannerButton.setIconSize(QtCore.QSize(self.size[0]-6, self.size[1]-6))
             self.mainLayout.addWidget(self.bannerButton)
 
             self.playButton = Qt.QPushButton(text="PLAY")
@@ -226,6 +233,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.scrollZone.setStyleSheet("QScrollArea { border: none; }")
         self.scrollInnerWidget = Qt.QWidget()
         self.scrollLayout = Qt.QGridLayout()
+        self.scrollLayout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
         self.scrollZone.setWidget(self.scrollInnerWidget)
         self.scrollInnerWidget.setLayout(self.scrollLayout)
         self.mainLayout.addWidget(self.scrollZone)
@@ -250,6 +258,7 @@ class IGameLauncher(Qt.QMainWindow):
         """Setup all the functions to interract with the UI"""
         for game, tile in self.tiles.items():
             tile.playButton.clicked.connect(functools.partial(self.launchGame, tile.gameSettings["exe"]))
+            tile.bannerButton.clicked.connect(functools.partial(self.modifyGame, tile.gameName))
         self.addButton.clicked.connect(self.askGame)
     
     def launchGame(self, exePath:str):
@@ -260,6 +269,53 @@ class IGameLauncher(Qt.QMainWindow):
             os.chdir(folderToMove)
             os.startfile(exePath)
             os.chdir(currentDir)
+    
+    def modifyGame(self, gameName:str):
+        """Modify the settings of a game or remove it, creates the interface"""
+        self.clear(self.scrollLayout)
+        
+        self.infosWidget = Qt.QWidget()
+        self.infosLayout = Qt.QVBoxLayout()
+        self.infosLayout.setAlignment(QtCore.Qt.AlignCenter)
+        self.infosWidget.setLayout(self.infosLayout)
+        self.scrollLayout.addWidget(self.infosWidget)
+
+        self.modifyWidget = Qt.QWidget()
+        self.modifyLayout = Qt.QVBoxLayout()
+        self.modifyLayout.setAlignment(QtCore.Qt.AlignCenter)
+        self.modifyWidget.setLayout(self.modifyLayout)
+        self.scrollLayout.addWidget(self.modifyWidget)
+
+        self.buildInfosLayout(gameName)
+    
+    def buildInfosLayout(self, gameName:str):
+        """Builds the content of the infos layout in the settings editor"""
+        bannerX, bannerY = round(self.GameTile.size[0]*1.5), round(self.GameTile.size[1]*1.5)
+        self.bannerImage = Qt.QLabel()
+        self.bannerImage.setFixedSize(bannerX, bannerY)
+        if os.path.exists(f"banners\\{gameName}.png"):
+            self.bannerImage.setPixmap(QtGui.QPixmap(f"banners\\{gameName}.png").scaled(bannerX, bannerY, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+        else:
+            self.bannerImage.setPixmap(QtGui.QPixmap("assets\\banner.png").scaled(bannerX, bannerY, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+        self.infosLayout.addWidget(self.bannerImage)
+
+        self.nameLabel = Qt.QLabel(text=gameName)
+        self.nameLabel.setFont(QtGui.QFont("Arial", 26))
+        self.nameLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.nameLabel.setWordWrap(True)
+        self.infosLayout.addWidget(self.nameLabel)
+
+        self.pathLabel = Qt.QLabel(text=self.data[gameName]["exe"].replace("\\", "\\ "))
+        self.pathLabel.setFont(QtGui.QFont("Arial", 14))
+        self.pathLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.pathLabel.setWordWrap(True)
+        self.infosLayout.addWidget(self.pathLabel)
+
+        self.playButton = Qt.QPushButton(text="PLAY")
+        self.playButton.setFont(QtGui.QFont("Arial", 24))
+        self.playButton.setFixedHeight(60)
+        self.infosLayout.addWidget(self.playButton)
+        self.playButton.clicked.connect(lambda: self.launchGame(self.data[gameName]["exe"]))
     
     def askGame(self):
         """Asks to add a new game"""
