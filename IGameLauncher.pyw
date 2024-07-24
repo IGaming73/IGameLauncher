@@ -1,6 +1,8 @@
+import PIL.JpegImagePlugin
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
 from PIL import Image  # image processing
+from PIL.JpegImagePlugin import JpegImageFile as ImageFile  # image object
 import functools  # tool to represent functions with arguments
 import os  # os interaction
 import glob  # file listing
@@ -113,25 +115,30 @@ class IGameLauncher(Qt.QMainWindow):
         
         def askBanner(self):
             """Asks for an image file as a banner"""
-            bannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
-            if bannerPath:
+            self.bannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game image banner")
+            if self.bannerPath:
                 self.bannerLabel.setText(self.bannerPath.replace("/", "\\").split("\\")[-1])
                 # cropping the banner image
                 bannerImage = Image.open(self.bannerPath)
-                width, height = bannerImage.size
-                currentRatio = width / height
-                ratio = IGameLauncher.GameTile.ratio
-                if currentRatio > ratio:
-                    newWidth = round(height * ratio)
-                    left = (width - newWidth) // 2
-                    right = left + newWidth
-                    bannerImage = bannerImage.crop((left, 0, right, height))
-                elif currentRatio < ratio:
-                    newHeight = round(width / ratio)
-                    top = (height - newHeight) // 2
-                    bottom = top + newHeight
-                    bannerImage = bannerImage.crop((0, top, width, bottom))
+                bannerImage = self.cropBanner(bannerImage)
                 bannerImage.save("banners\\banner.png")
+        
+        def cropBanner(self, image:ImageFile) -> ImageFile:
+            """Crops an image in banner format"""
+            width, height = image.size
+            currentRatio = width / height
+            ratio = IGameLauncher.GameTile.ratio
+            if currentRatio > ratio:
+                newWidth = round(height * ratio)
+                left = (width - newWidth) // 2
+                right = left + newWidth
+                image = image.crop((left, 0, right, height))
+            elif currentRatio < ratio:
+                newHeight = round(width / ratio)
+                top = (height - newHeight) // 2
+                bottom = top + newHeight
+                image = image.crop((0, top, width, bottom))
+            return image
         
         def cancel(self):
             """Cancels adding the game"""
@@ -442,31 +449,76 @@ class IGameLauncher(Qt.QMainWindow):
         """Connects widgets from the edit menu"""
         def updateName():
             self.modifiedData["name"] = self.changeNameInput.text()
+            self.nameLabel.setText(self.modifiedData["name"])
+
         def updateFolder():
             self.modifiedData["folder"] = self.folderInput.text()
+
         def askFolder():
-            newFolder = filedialog.askdirectory()
+            newFolder = filedialog.askdirectory(title="Select game folder")
             if newFolder:
                 newFolder = newFolder.replace("/", "\\")
                 self.modifiedData["folder"] = newFolder
                 self.folderInput.setText(newFolder)
+
         def updateExe():
             self.modifiedData["exe"] = self.exeInput.text()
+
         def askExe():
-            newExe = filedialog.askopenfilename()
+            newExe = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.modifiedData["folder"], title="Select game executable")
             if newExe:
                 newExe = newExe.replace("/", "\\")
                 self.modifiedData["exe"] = newExe
                 self.exeInput.setText(newExe)
+                self.pathLabel.setText(self.modifiedData["exe"].replace("\\", "\\ "))
+
+        def updateBanner():
+            newBannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.modifiedData["folder"], title="Select game image banner")
+            if newBannerPath:
+                self.modifiedData["newBanner"] = True
+                newBanner = Image.open(newBannerPath)
+                newBanner = self.AddPopup.cropBanner(self, newBanner)
+                newBanner.save("banners\\banner.png")
+                self.bannerImage.setPixmap(QtGui.QPixmap("banners\\banner.png").scaled(round(self.GameTile.size[0]*1.5), round(self.GameTile.size[1]*1.5), QtCore.Qt.AspectRatioMode.KeepAspectRatio))
         
-        self.modifiedGame = gameName
+        def remove():
+            if os.path.exists(f"banners\\{gameName}.png"):
+                os.remove(f"banners\\{gameName}.png")
+            del(self.data[gameName])
+            self.writeData()
+            self.reload()
+
+        def cancel():
+            if os.path.exists("banners\\banner.png"):
+                os.remove("banners\\banner.png")
+            self.reload()
+
+        def apply():
+            if self.modifiedData["name"] != gameName:
+                if os.path.exists(f"banners\\{gameName}.png"):
+                    os.rename(f"banners\\{gameName}.png", f"banners\\{self.modifiedData["name"]}.png")
+                oldData = self.data[gameName]
+                del(self.data[gameName])
+                self.data[self.modifiedData["name"]] = oldData
+            if self.modifiedData["newBanner"]:
+                if os.path.exists(f"banners\\{self.modifiedData["name"]}.png"):
+                    os.remove(f"banners\\{self.modifiedData["name"]}.png")
+                os.rename("banners\\banner.png", f"banners\\{self.modifiedData["name"]}.png")
+            self.data[self.modifiedData["name"]]["folder"] = self.modifiedData["folder"]
+            self.data[self.modifiedData["name"]]["exe"] = self.modifiedData["exe"]
+            self.writeData()
+            self.reload()
+        
         self.modifiedData = {"name":gameName, "folder":self.data[gameName]["folder"], "exe":self.data[gameName]["exe"], "newBanner":False}
         self.changeNameInput.editingFinished.connect(updateName)
         self.folderInput.editingFinished.connect(updateFolder)
         self.folderButton.clicked.connect(askFolder)
         self.exeInput.editingFinished.connect(updateExe)
         self.exeButton.clicked.connect(askExe)
-        self.cancelButton.clicked.connect(self.reload)
+        self.bannerButton.clicked.connect(updateBanner)
+        self.removeButton.clicked.connect(remove)
+        self.cancelButton.clicked.connect(cancel)
+        self.applyButton.clicked.connect(apply)
     
     def askGame(self):
         """Asks to add a new game"""
