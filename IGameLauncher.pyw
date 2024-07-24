@@ -85,7 +85,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.folderButton.clicked.connect(self.selectFolder)
             self.exeButton.clicked.connect(self.selectExe)
             self.bannerButton.clicked.connect(self.askBanner)
-            self.cancelButton.clicked.connect(self.close)
+            self.cancelButton.clicked.connect(self.cancel)
             self.doneButton.clicked.connect(self.done)
         
         def selectFolder(self):
@@ -101,10 +101,8 @@ class IGameLauncher(Qt.QMainWindow):
 
         def selectExe(self):
             """Select the game executable"""
-            exeFile = filedialog.askopenfile(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
-            if exeFile:
-                exePath = exeFile.name
-                exeFile.close()
+            exePath = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            if exePath:
                 self.data["exe"] = exePath.replace("/", "\\")
                 self.exeLabel.setText(exePath.replace("/", "\\").split("\\")[-1])
         
@@ -115,10 +113,8 @@ class IGameLauncher(Qt.QMainWindow):
         
         def askBanner(self):
             """Asks for an image file as a banner"""
-            bannerFile = filedialog.askopenfile(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
-            if bannerFile:
-                self.bannerPath = bannerFile.name
-                bannerFile.close()
+            bannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            if bannerPath:
                 self.bannerLabel.setText(self.bannerPath.replace("/", "\\").split("\\")[-1])
                 # cropping the banner image
                 bannerImage = Image.open(self.bannerPath)
@@ -135,12 +131,18 @@ class IGameLauncher(Qt.QMainWindow):
                     top = (height - newHeight) // 2
                     bottom = top + newHeight
                     bannerImage = bannerImage.crop((0, top, width, bottom))
-                bannerImage.save(f"banners\\banner.png")
+                bannerImage.save("banners\\banner.png")
+        
+        def cancel(self):
+            """Cancels adding the game"""
+            if os.path.exists("banners\\banner.png"):
+                os.remove("banners\\banner.png")
+            self.close()
         
         def done(self):
             """When the done button is clicked"""
-            if os.path.exists(f"banners\\banner.png"):
-                os.rename(f"banners\\banner.png", f"banners\\{self.gameName}.png")
+            if os.path.exists("banners\\banner.png"):
+                os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
             self.close()
     
 
@@ -194,12 +196,14 @@ class IGameLauncher(Qt.QMainWindow):
         self.show()  # display the UI
     
     def readData(self):
-        """Reads the session data, or creates an empty file"""
+        """Reads the session data, or creates an empty file, also creates banners folder if not found"""
         if not os.path.exists("data.json"):
             with open("data.json", "w", encoding="utf-8") as dataFile:
                 json.dump({}, dataFile, indent=4)
         with open("data.json", "r", encoding="utf-8") as dataFile:
             self.data = json.load(dataFile)
+        if not os.path.exists("banners"):
+            os.mkdir("banners")
     
     def writeData(self):
         """Completely overwrite the data in the json file"""
@@ -307,7 +311,11 @@ class IGameLauncher(Qt.QMainWindow):
         self.nameLabel.setWordWrap(True)
         self.infosLayout.addWidget(self.nameLabel)
 
-        self.pathLabel = Qt.QLabel(text=self.data[gameName]["exe"].replace("\\", "\\ "))
+        path = self.data[gameName]["exe"]
+        if path:
+            self.pathLabel = Qt.QLabel(text=path.replace("\\", "\\ "))
+        else:
+            self.pathLabel = Qt.QLabel()
         self.pathLabel.setFont(QtGui.QFont("Arial", 16))
         self.pathLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.pathLabel.setWordWrap(True)
@@ -323,6 +331,24 @@ class IGameLauncher(Qt.QMainWindow):
 
     def buildEditLayout(self, gameName:str):
         """Builds the layout with the game editing options"""
+        self.changeNameWidget = Qt.QWidget()
+        self.changeNameLayout = Qt.QHBoxLayout()
+        self.changeNameWidget.setLayout(self.changeNameLayout)
+        self.modifyLayout.addWidget(self.changeNameWidget)
+
+        self.changeNameLabel = Qt.QLabel(text="Game name:")
+        self.changeNameLabel.setFont(QtGui.QFont("Arial", 24))
+        self.changeNameLayout.addWidget(self.changeNameLabel)
+
+        self.changeNameInput = Qt.QLineEdit()
+        self.changeNameInput.setPlaceholderText("Game name")
+        self.changeNameInput.setText(gameName)
+        self.changeNameInput.setFont(QtGui.QFont("Arial", 20))
+        self.changeNameInput.setFixedHeight(50)
+        self.changeNameLayout.addWidget(self.changeNameInput)
+
+        self.changeNameLayout.addStretch()
+
         self.folderWidget = Qt.QWidget()
         self.folderLayout = Qt.QHBoxLayout()
         self.folderWidget.setLayout(self.folderLayout)
@@ -382,6 +408,65 @@ class IGameLauncher(Qt.QMainWindow):
         self.bannerLayout.addWidget(self.bannerButton)
         self.bannerLayout.addStretch()
 
+        self.removeWidget = Qt.QWidget()
+        self.removeLayout = Qt.QHBoxLayout()
+        self.removeWidget.setLayout(self.removeLayout)
+        self.modifyLayout.addWidget(self.removeWidget)
+
+        self.removeButton = Qt.QPushButton(text="Remove game from library")
+        self.removeButton.setFont(QtGui.QFont("Arial", 20))
+        self.removeButton.setFixedHeight(50)
+        self.removeLayout.addWidget(self.removeButton)
+        self.removeLayout.addStretch()
+
+        self.finishWidget = Qt.QWidget()
+        self.finishLayout = Qt.QHBoxLayout()
+        self.finishWidget.setLayout(self.finishLayout)
+        self.modifyLayout.addWidget(self.finishWidget)
+
+        self.applyButton = Qt.QPushButton(text="Apply")
+        self.applyButton.setFont(QtGui.QFont("Arial", 20))
+        self.applyButton.setFixedHeight(50)
+        self.finishLayout.addWidget(self.applyButton)
+
+        self.cancelButton = Qt.QPushButton(text="Cancel")
+        self.cancelButton.setFont(QtGui.QFont("Arial", 20))
+        self.cancelButton.setFixedHeight(50)
+        self.finishLayout.addWidget(self.cancelButton)
+
+        self.finishLayout.addStretch()
+
+        self.monitorEdit(gameName)
+    
+    def monitorEdit(self, gameName:str):
+        """Connects widgets from the edit menu"""
+        def updateName():
+            self.modifiedData["name"] = self.changeNameInput.text()
+        def updateFolder():
+            self.modifiedData["folder"] = self.folderInput.text()
+        def askFolder():
+            newFolder = filedialog.askdirectory()
+            if newFolder:
+                newFolder = newFolder.replace("/", "\\")
+                self.modifiedData["folder"] = newFolder
+                self.folderInput.setText(newFolder)
+        def updateExe():
+            self.modifiedData["exe"] = self.exeInput.text()
+        def askExe():
+            newExe = filedialog.askopenfilename()
+            if newExe:
+                newExe = newExe.replace("/", "\\")
+                self.modifiedData["exe"] = newExe
+                self.exeInput.setText(newExe)
+        
+        self.modifiedGame = gameName
+        self.modifiedData = {"name":gameName, "folder":self.data[gameName]["folder"], "exe":self.data[gameName]["exe"], "newBanner":False}
+        self.changeNameInput.editingFinished.connect(updateName)
+        self.folderInput.editingFinished.connect(updateFolder)
+        self.folderButton.clicked.connect(askFolder)
+        self.exeInput.editingFinished.connect(updateExe)
+        self.exeButton.clicked.connect(askExe)
+        self.cancelButton.clicked.connect(self.reload)
     
     def askGame(self):
         """Asks to add a new game"""
