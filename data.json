@@ -22,5 +22,17 @@
     "PC Building Simulator 2": {
         "folder": "D:\\Ilwan\\Logiciels\\PC Building Simulator 2",
         "exe": "D:\\Ilwan\\Logiciels\\PC Building Simulator 2\\Launcher.bat"
+    },
+    "ChroMapper": {
+        "folder": "D:\\Ilwan\\Logiciels\\ChroMapper",
+        "exe": "D:\\Ilwan\\Logiciels\\ChroMapper\\CML.exe"
+    },
+    "ArrowVortex": {
+        "folder": "D:\\Ilwan\\Logiciels\\ArrowVortex",
+        "exe": "D:\\Ilwan\\Logiciels\\ArrowVortex\\ArrowVortex.exe"
+    },
+    "Auto Clicker": {
+        "folder": "D:\\Ilwan\\Logiciels\\AutoClicker",
+        "exe": "D:\\Ilwan\\Logiciels\\AutoClicker\\AutoClicker.exe"
     }
 }
