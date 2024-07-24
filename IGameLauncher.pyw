@@ -8,6 +8,7 @@ import os  # os interaction
 import glob  # file listing
 import time  # delay and time
 import sys  # system functions
+import pyshortcuts  # create app shortcuts
 import json  # handle json data
 from tkinter import filedialog  # file choosing ui
 
@@ -76,6 +77,8 @@ class IGameLauncher(Qt.QMainWindow):
             self.mainLayout.addWidget(self.validationWidget)
 
             self.doneButton = Qt.QPushButton(text="Done")
+            self.doneButton.setFont(QtGui.QFont("Arial", 14))
+            self.doneButton.setStyleSheet("color: green;")
             self.validationLayout.addWidget(self.doneButton)
 
             self.cancelButton = Qt.QPushButton(text="Cancel")
@@ -138,6 +141,7 @@ class IGameLauncher(Qt.QMainWindow):
                 top = (height - newHeight) // 2
                 bottom = top + newHeight
                 image = image.crop((0, top, width, bottom))
+            image = image.resize((IGameLauncher.GameTile.bigSize[0], IGameLauncher.GameTile.bigSize[1]))
             return image
         
         def cancel(self):
@@ -156,6 +160,7 @@ class IGameLauncher(Qt.QMainWindow):
     class GameTile(Qt.QWidget):
         """Object that represents a tile to display the game"""
         size = (240, 350)
+        bigSize = (round(size[0]*1.5), round(size[1]*1.5))
         ratio = size[0]/size[1]
 
         def __init__(self, gameName:str, gameSettings:dict):
@@ -303,7 +308,7 @@ class IGameLauncher(Qt.QMainWindow):
         """Builds the content of the infos layout in the settings editor"""
         self.scrollLayout.setAlignment(QtCore.Qt.AlignLeft)
 
-        bannerX, bannerY = round(self.GameTile.size[0]*1.5), round(self.GameTile.size[1]*1.5)
+        bannerX, bannerY = self.GameTile.bigSize[0], self.GameTile.bigSize[1]
         self.bannerImage = Qt.QLabel()
         self.bannerImage.setFixedSize(bannerX, bannerY)
         if os.path.exists(f"banners\\{gameName}.png"):
@@ -415,12 +420,24 @@ class IGameLauncher(Qt.QMainWindow):
         self.bannerLayout.addWidget(self.bannerButton)
         self.bannerLayout.addStretch()
 
+        self.shortcutWidget = Qt.QWidget()
+        self.shortcutLayout = Qt.QHBoxLayout()
+        self.shortcutWidget.setLayout(self.shortcutLayout)
+        self.modifyLayout.addWidget(self.shortcutWidget)
+
+        self.shortcutButton = Qt.QPushButton(text="Add desktop shortcut")
+        self.shortcutButton.setFont(QtGui.QFont("Arial", 20))
+        self.shortcutButton.setFixedHeight(50)
+        self.shortcutLayout.addWidget(self.shortcutButton)
+        self.shortcutLayout.addStretch()
+
         self.removeWidget = Qt.QWidget()
         self.removeLayout = Qt.QHBoxLayout()
         self.removeWidget.setLayout(self.removeLayout)
         self.modifyLayout.addWidget(self.removeWidget)
 
         self.removeButton = Qt.QPushButton(text="Remove game from library")
+        self.removeButton.setStyleSheet("color: red;")
         self.removeButton.setFont(QtGui.QFont("Arial", 20))
         self.removeButton.setFixedHeight(50)
         self.removeLayout.addWidget(self.removeButton)
@@ -432,6 +449,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.modifyLayout.addWidget(self.finishWidget)
 
         self.applyButton = Qt.QPushButton(text="Apply")
+        self.applyButton.setStyleSheet("color: green;")
         self.applyButton.setFont(QtGui.QFont("Arial", 20))
         self.applyButton.setFixedHeight(50)
         self.finishLayout.addWidget(self.applyButton)
@@ -479,8 +497,11 @@ class IGameLauncher(Qt.QMainWindow):
                 newBanner = Image.open(newBannerPath)
                 newBanner = self.AddPopup.cropBanner(self, newBanner)
                 newBanner.save("banners\\banner.png")
-                self.bannerImage.setPixmap(QtGui.QPixmap("banners\\banner.png").scaled(round(self.GameTile.size[0]*1.5), round(self.GameTile.size[1]*1.5), QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+                self.bannerImage.setPixmap(QtGui.QPixmap("banners\\banner.png").scaled(self.GameTile.bigSize[0], self.GameTile.bigSize[1], QtCore.Qt.AspectRatioMode.KeepAspectRatio))
         
+        def shortcut():
+            self.modifiedData["createShortcut"] = True
+
         def remove():
             if os.path.exists(f"banners\\{gameName}.png"):
                 os.remove(f"banners\\{gameName}.png")
@@ -506,16 +527,19 @@ class IGameLauncher(Qt.QMainWindow):
                 os.rename("banners\\banner.png", f"banners\\{self.modifiedData["name"]}.png")
             self.data[self.modifiedData["name"]]["folder"] = self.modifiedData["folder"]
             self.data[self.modifiedData["name"]]["exe"] = self.modifiedData["exe"]
+            if self.modifiedData["createShortcut"]:
+                pyshortcuts.make_shortcut(self.modifiedData["exe"], name=self.modifiedData["name"], working_dir="\\".join(self.modifiedData["exe"].split("\\")[:-1]), desktop=True, icon=self.modifiedData["exe"])
             self.writeData()
             self.reload()
         
-        self.modifiedData = {"name":gameName, "folder":self.data[gameName]["folder"], "exe":self.data[gameName]["exe"], "newBanner":False}
+        self.modifiedData = {"name":gameName, "folder":self.data[gameName]["folder"], "exe":self.data[gameName]["exe"], "newBanner":False, "createShortcut":False}
         self.changeNameInput.editingFinished.connect(updateName)
         self.folderInput.editingFinished.connect(updateFolder)
         self.folderButton.clicked.connect(askFolder)
         self.exeInput.editingFinished.connect(updateExe)
         self.exeButton.clicked.connect(askExe)
         self.bannerButton.clicked.connect(updateBanner)
+        self.shortcutButton.clicked.connect(shortcut)
         self.removeButton.clicked.connect(remove)
         self.cancelButton.clicked.connect(cancel)
         self.applyButton.clicked.connect(apply)
