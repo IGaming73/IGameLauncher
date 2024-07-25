@@ -9,6 +9,7 @@ import glob  # file listing
 import time  # delay and time
 import sys  # system functions
 import pyshortcuts  # create app shortcuts
+import darkdetect  # detect dark mode
 import json  # handle json data
 from tkinter import filedialog  # file choosing ui
 
@@ -16,26 +17,26 @@ from tkinter import filedialog  # file choosing ui
 class IGameLauncher(Qt.QMainWindow):
     """Main UI for the game launcher app"""
 
-    class AddPopup(Qt.QWidget):
-        """A popup window to add a game"""
+    class AddWidget(Qt.QWidget):
+        """A widget to add a game"""
 
         def __init__(self):
             super().__init__()
-            self.gameName = "Unnamed"
+            self.gameName = "Game name"
             self.data = {"folder": None, "exe": None}
-            self.setWindowTitle("Add game")
             self.build()  # build the widgets
             self.setup()
-            self.show()
         
         def build(self):
             """Build the widgets"""
-            self.setFont(QtGui.QFont("Arial", 16))
             self.mainLayout = Qt.QVBoxLayout()
             self.setLayout(self.mainLayout)
 
             self.nameInput = Qt.QLineEdit()
             self.nameInput.setPlaceholderText("Enter game name")
+            self.nameInput.setText("Game name")
+            self.nameInput.setFixedHeight(50)
+            self.nameInput.setFont(QtGui.QFont("Arial", 16))
             self.mainLayout.addWidget(self.nameInput)
 
             self.folderWidget = Qt.QWidget()
@@ -43,22 +44,42 @@ class IGameLauncher(Qt.QMainWindow):
             self.folderWidget.setLayout(self.folderLayout)
             self.mainLayout.addWidget(self.folderWidget)
 
-            self.folderButton = Qt.QPushButton(text="Select game folder")
+            self.folderInput = Qt.QLineEdit()
+            self.folderInput.setPlaceholderText("Game folder path")
+            self.folderInput.setFixedHeight(50)
+            self.folderInput.setFont(QtGui.QFont("Arial", 16))
+            self.folderLayout.addWidget(self.folderInput)
+
+            self.folderButton = Qt.QPushButton()
+            self.folderButton.setFixedSize(50, 50)
+            if darkdetect.isDark():
+                self.folderButton.setIcon(QtGui.QIcon("assets\\dark\\folder.png"))
+            else:
+                self.folderButton.setIcon(QtGui.QIcon("assets\\light\\folder.png"))
+            self.folderButton.setIconSize(QtCore.QSize(35, 35))
+            self.folderButton.setFont(QtGui.QFont("Arial", 16))
             self.folderLayout.addWidget(self.folderButton)
-            
-            self.folderLabel = Qt.QLabel()
-            self.folderLayout.addWidget(self.folderLabel)
 
             self.exeWidget = Qt.QWidget()
             self.exeLayout = Qt.QHBoxLayout()
             self.exeWidget.setLayout(self.exeLayout)
             self.mainLayout.addWidget(self.exeWidget)
 
-            self.exeButton = Qt.QPushButton(text="Select game executable")
-            self.exeLayout.addWidget(self.exeButton)
+            self.exeInput = Qt.QLineEdit()
+            self.exeInput.setPlaceholderText("Game executable path")
+            self.exeInput.setFixedHeight(50)
+            self.exeInput.setFont(QtGui.QFont("Arial", 16))
+            self.exeLayout.addWidget(self.exeInput)
 
-            self.exeLabel = Qt.QLabel()
-            self.exeLayout.addWidget(self.exeLabel)
+            self.exeButton = Qt.QPushButton()
+            self.exeButton.setFixedSize(50, 50)
+            if darkdetect.isDark():
+                self.exeButton.setIcon(QtGui.QIcon("assets\\dark\\folder.png"))
+            else:
+                self.exeButton.setIcon(QtGui.QIcon("assets\\light\\folder.png"))
+            self.exeButton.setIconSize(QtCore.QSize(35, 35))
+            self.exeButton.setFont(QtGui.QFont("Arial", 16))
+            self.exeLayout.addWidget(self.exeButton)
 
             self.bannerWidget = Qt.QWidget()
             self.bannerLayout = Qt.QHBoxLayout()
@@ -66,9 +87,11 @@ class IGameLauncher(Qt.QMainWindow):
             self.mainLayout.addWidget(self.bannerWidget)
 
             self.bannerButton = Qt.QPushButton(text="Select game banner")
+            self.bannerButton.setFont(QtGui.QFont("Arial", 16))
             self.bannerLayout.addWidget(self.bannerButton)
 
             self.bannerLabel = Qt.QLabel()
+            self.bannerLabel.setFont(QtGui.QFont("Arial", 16))
             self.bannerLayout.addWidget(self.bannerLabel)
 
             self.validationWidget = Qt.QWidget()
@@ -77,11 +100,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.mainLayout.addWidget(self.validationWidget)
 
             self.doneButton = Qt.QPushButton(text="Done")
-            self.doneButton.setFont(QtGui.QFont("Arial", 14))
+            self.doneButton.setFont(QtGui.QFont("Arial", 16))
             self.doneButton.setStyleSheet("color: green;")
             self.validationLayout.addWidget(self.doneButton)
 
             self.cancelButton = Qt.QPushButton(text="Cancel")
+            self.cancelButton.setFont(QtGui.QFont("Arial", 16))
             self.validationLayout.addWidget(self.cancelButton)
         
         def setup(self):
@@ -148,13 +172,11 @@ class IGameLauncher(Qt.QMainWindow):
             """Cancels adding the game"""
             if os.path.exists("banners\\banner.png"):
                 os.remove("banners\\banner.png")
-            self.close()
         
         def done(self):
             """When the done button is clicked"""
             if os.path.exists("banners\\banner.png"):
                 os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
-            self.close()
     
 
     class GameTile(Qt.QWidget):
@@ -187,7 +209,10 @@ class IGameLauncher(Qt.QMainWindow):
             if os.path.exists(f"banners\\{self.gameName}.png"):
                 self.icon = QtGui.QIcon(f"banners\\{self.gameName}.png")
             else:
-                self.icon = QtGui.QIcon("assets\\banner.png")
+                if darkdetect.isDark():
+                    self.icon = QtGui.QIcon("assets\\dark\\banner.png")
+                else:
+                    self.icon = QtGui.QIcon("assets\\light\\banner.png")
             self.bannerButton.setIcon(self.icon)
             self.bannerButton.setIconSize(QtCore.QSize(self.size[0]-6, self.size[1]-6))
             self.mainLayout.addWidget(self.bannerButton)
@@ -266,7 +291,10 @@ class IGameLauncher(Qt.QMainWindow):
                 self.currentLine += 1
         self.addButton = Qt.QPushButton()
         self.addButton.setFixedSize(150, 150)
-        self.addButton.setIcon(QtGui.QIcon("assets\\add.png"))
+        if darkdetect.isDark():
+            self.addButton.setIcon(QtGui.QIcon("assets\\dark\\add.png"))
+        else:
+            self.addButton.setIcon(QtGui.QIcon("assets\\light\\add.png"))
         self.addButton.setIconSize(QtCore.QSize(130, 130))
         self.scrollLayout.addWidget(self.addButton, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
     
@@ -314,7 +342,7 @@ class IGameLauncher(Qt.QMainWindow):
         if os.path.exists(f"banners\\{gameName}.png"):
             self.bannerImage.setPixmap(QtGui.QPixmap(f"banners\\{gameName}.png").scaled(bannerX, bannerY, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
         else:
-            self.bannerImage.setPixmap(QtGui.QPixmap("assets\\banner.png").scaled(bannerX, bannerY, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+            self.bannerImage.setPixmap(QtGui.QPixmap("assets\\light\\banner.png").scaled(bannerX, bannerY, QtCore.Qt.AspectRatioMode.KeepAspectRatio))
         self.infosLayout.addWidget(self.bannerImage)
 
         self.nameLabel = Qt.QLabel(text=gameName)
@@ -379,7 +407,10 @@ class IGameLauncher(Qt.QMainWindow):
 
         self.folderButton = Qt.QPushButton()
         self.folderButton.setFixedSize(50, 50)
-        self.folderButton.setIcon(QtGui.QIcon("assets\\folder.png"))
+        if darkdetect.isDark():
+            self.folderButton.setIcon(QtGui.QIcon("assets\\dark\\folder.png"))
+        else:
+            self.folderButton.setIcon(QtGui.QIcon("assets\\light\\folder.png"))
         self.folderButton.setIconSize(QtCore.QSize(35, 35))
         self.folderLayout.addWidget(self.folderButton)
 
@@ -403,7 +434,10 @@ class IGameLauncher(Qt.QMainWindow):
 
         self.exeButton = Qt.QPushButton()
         self.exeButton.setFixedSize(50, 50)
-        self.exeButton.setIcon(QtGui.QIcon("assets\\folder.png"))
+        if darkdetect.isDark():
+            self.exeButton.setIcon(QtGui.QIcon("assets\\dark\\folder.png"))
+        else:
+            self.exeButton.setIcon(QtGui.QIcon("assets\\light\\folder.png"))
         self.exeButton.setIconSize(QtCore.QSize(35, 35))
         self.exeLayout.addWidget(self.exeButton)
 
@@ -546,14 +580,18 @@ class IGameLauncher(Qt.QMainWindow):
     
     def askGame(self):
         """Asks to add a new game"""
-        self.askPopup = self.AddPopup()
-        self.askPopup.doneButton.clicked.connect(lambda: self.addGame(self.askPopup.gameName, self.askPopup.data))
+        self.askWidget = self.AddWidget()
+        self.clear(self.scrollLayout)
+        self.scrollLayout.addWidget(self.askWidget)
+        self.askWidget.doneButton.clicked.connect(lambda: self.addGame(self.askWidget.gameName, self.askWidget.data))
+        self.askWidget.cancelButton.clicked.connect(self.reload)
 
     def addGame(self, name:str, data:dict):
-        """Adds a new game to the library"""
+        """Adds a new game to the library and go to main menu"""
         self.data[name] = data
         self.writeData()
         self.reload()
+
 
 
 if __name__ == "__main__":  # if the file is executed directly
@@ -565,6 +603,26 @@ if __name__ == "__main__":  # if the file is executed directly
     
     # launch app
     App = Qt.QApplication(sys.argv)  # creating the app
+    # set style and theme
+    App.setStyle("fusion")  # set theme
+    if darkdetect.isDark():  # if using dark mode
+        # dark mode style found online
+        palette = QtGui.QPalette()
+        palette.setColor(QtGui.QPalette.Window, QtGui.QColor(53, 53, 53))
+        palette.setColor(QtGui.QPalette.WindowText, QtCore.Qt.white)
+        palette.setColor(QtGui.QPalette.Base, QtGui.QColor(25, 25, 25))
+        palette.setColor(QtGui.QPalette.AlternateBase, QtGui.QColor(53, 53, 53))
+        palette.setColor(QtGui.QPalette.ToolTipBase, QtCore.Qt.black)
+        palette.setColor(QtGui.QPalette.ToolTipText, QtCore.Qt.white)
+        palette.setColor(QtGui.QPalette.Text, QtCore.Qt.white)
+        palette.setColor(QtGui.QPalette.Button, QtGui.QColor(53, 53, 53))
+        palette.setColor(QtGui.QPalette.ButtonText, QtCore.Qt.white)
+        palette.setColor(QtGui.QPalette.BrightText, QtCore.Qt.red)
+        palette.setColor(QtGui.QPalette.Link, QtGui.QColor(42, 130, 218))
+        palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(42, 130, 218))
+        palette.setColor(QtGui.QPalette.HighlightedText, QtCore.Qt.black)
+        App.setPalette(palette)
+
     Window = IGameLauncher()  # creating the GUI
     Window.start()  # starting the GUI
     App.exec_()  # executing the app
