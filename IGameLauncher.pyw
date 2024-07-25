@@ -9,6 +9,8 @@ import os  # os interaction
 import glob  # file listing
 import time  # delay and time
 import sys  # system functions
+import locale  # get position and language settings
+import ctypes  # get system informations
 import pyshortcuts  # create app shortcuts
 import darkdetect  # detect dark mode
 import json  # handle json data
@@ -20,16 +22,29 @@ class IGameLauncher(Qt.QMainWindow):
     
     class AddWidget(Qt.QWidget):
         """A widget to add a game"""
-        defaultName = "Game name"
         doneSignal = pyqtSignal()
 
-        def __init__(self, existingNames):
+        def __init__(self, existingNames:list, language:str, languageData:dict):
             super().__init__()
+            self.language = language
+            self.languageData = languageData
+            self.defaultName = self.translate("gameName")
             self.gameName = self.defaultName
             self.existingNames = existingNames
             self.data = {"folder": None, "exe": None}
             self.build()  # build the widgets
             self.setup()
+        
+        def translate(self, textId:str) -> str:
+            """Returns the appropriate text depending on the language using the language id corresponding with the ones in languages.json"""
+            if textId not in self.languageData:
+                return textId
+            else:
+                translations = self.languageData[textId]
+                if self.language in translations:
+                    return translations[self.language]
+                else:
+                    return translations["en"]
         
         def build(self):
             """Build the widgets"""
@@ -84,7 +99,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.rightLayout.addWidget(self.nameWidget)
 
             self.nameInput = Qt.QLineEdit()
-            self.nameInput.setPlaceholderText("Enter game name")
+            self.nameInput.setPlaceholderText(self.translate("enterGameName"))
             self.nameInput.setText(self.defaultName)
             self.nameInput.setFixedHeight(50)
             self.nameInput.setFont(QtGui.QFont("Arial", 20))
@@ -97,7 +112,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.rightLayout.addWidget(self.folderWidget)
 
             self.folderInput = Qt.QLineEdit()
-            self.folderInput.setPlaceholderText("Game folder path")
+            self.folderInput.setPlaceholderText(self.translate("gameFolderPath"))
             self.folderInput.setFixedHeight(50)
             self.folderInput.setFont(QtGui.QFont("Arial", 20))
             self.folderLayout.addWidget(self.folderInput)
@@ -118,7 +133,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.rightLayout.addWidget(self.exeWidget)
 
             self.exeInput = Qt.QLineEdit()
-            self.exeInput.setPlaceholderText("Game executable path")
+            self.exeInput.setPlaceholderText(self.translate("gameExecutablePath"))
             self.exeInput.setFixedHeight(50)
             self.exeInput.setFont(QtGui.QFont("Arial", 20))
             self.exeLayout.addWidget(self.exeInput)
@@ -138,7 +153,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerWidget.setLayout(self.bannerLayout)
             self.rightLayout.addWidget(self.bannerWidget)
 
-            self.bannerButton = Qt.QPushButton(text="Select game banner")
+            self.bannerButton = Qt.QPushButton(text=self.translate("selectGameBanner"))
             self.bannerButton.setFixedHeight(50)
             self.bannerButton.setFont(QtGui.QFont("Arial", 20))
             self.bannerLayout.addWidget(self.bannerButton)
@@ -149,13 +164,13 @@ class IGameLauncher(Qt.QMainWindow):
             self.validationWidget.setLayout(self.validationLayout)
             self.rightLayout.addWidget(self.validationWidget)
 
-            self.doneButton = Qt.QPushButton(text="Done")
+            self.doneButton = Qt.QPushButton(text=self.translate("done"))
             self.doneButton.setFixedHeight(50)
             self.doneButton.setFont(QtGui.QFont("Arial", 20))
             self.doneButton.setStyleSheet("color: green;")
             self.validationLayout.addWidget(self.doneButton)
 
-            self.cancelButton = Qt.QPushButton(text="Cancel")
+            self.cancelButton = Qt.QPushButton(text=self.translate("cancel"))
             self.cancelButton.setFixedHeight(50)
             self.cancelButton.setFont(QtGui.QFont("Arial", 20))
             self.validationLayout.addWidget(self.cancelButton)
@@ -174,7 +189,7 @@ class IGameLauncher(Qt.QMainWindow):
         
         def selectFolder(self):
             """Select the game folder"""
-            folderPath = filedialog.askdirectory(title="Select game folder")
+            folderPath = filedialog.askdirectory(title=self.translate("selectGameFolder"))
             if folderPath:
                 self.data["folder"] = folderPath.replace("/", "\\")
                 if self.gameName == self.defaultName or not self.gameName:
@@ -188,7 +203,7 @@ class IGameLauncher(Qt.QMainWindow):
 
         def selectExe(self):
             """Select the game executable"""
-            exePath = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title="Select game executable")
+            exePath = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.data["folder"], title=self.translate("selectGameExecutable"))
             if exePath:
                 self.data["exe"] = exePath.replace("/", "\\")
                 self.exeInput.setText(self.data["exe"])
@@ -206,7 +221,7 @@ class IGameLauncher(Qt.QMainWindow):
         
         def askBanner(self):
             """Asks for an image file as a banner"""
-            self.bannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title="Select game image banner")
+            self.bannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.data["folder"], title=self.translate("selectGameImageBanner"))
             if self.bannerPath:
                 # cropping the banner image
                 bannerImage = Image.open(self.bannerPath)
@@ -241,16 +256,16 @@ class IGameLauncher(Qt.QMainWindow):
             """When the done button is clicked"""
             if not (self.gameName and self.data["folder"] and self.data["exe"]):  # if an entry is missing
                 missingWarning = Qt.QMessageBox()
-                missingWarning.warning(self, "Missing informations", "Some informations are missing.\nPlease fill every input to proceed.", Qt.QMessageBox.Ok)
+                missingWarning.warning(self, self.translate("missingInformations"), self.translate("missingInformationsText"), Qt.QMessageBox.Ok)
             elif not os.path.exists(self.data["folder"]):
                 missingWarning = Qt.QMessageBox()
-                missingWarning.warning(self, "Missing folder", "The given game folder doesn't exist.\nPlease enter a valid folder.", Qt.QMessageBox.Ok)
+                missingWarning.warning(self, self.translate("missingFolder"), self.translate("missingFolderText"), Qt.QMessageBox.Ok)
             elif not os.path.exists(self.data["exe"]):
                 missingWarning = Qt.QMessageBox()
-                missingWarning.warning(self, "Missing executable", "The given game executable file doesn't exist.\nPlease enter a valid file", Qt.QMessageBox.Ok)
+                missingWarning.warning(self, self.translate("missingExecutable"), self.translate("missingExecutableText"), Qt.QMessageBox.Ok)
             elif self.gameName in self.existingNames:
                 nameWarning = Qt.QMessageBox()
-                nameWarning.warning(self, "Duplicate name", "Another game in the library already has that name.\nPlease choose another name.", Qt.QMessageBox.Ok)
+                nameWarning.warning(self, self.translate("duplicateName"), self.translate("duplicateNameText"), Qt.QMessageBox.Ok)
             else:
                 if os.path.exists("banners\\banner.png"):
                     os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
@@ -262,12 +277,25 @@ class IGameLauncher(Qt.QMainWindow):
         removeSignal = pyqtSignal()
         applySignal = pyqtSignal()
 
-        def __init__(self, gameName, data, existingNames):
+        def __init__(self, gameName:str, data:dict, existingNames:list, language:str, languageData:dict):
             super().__init__()
+            self.language = language
+            self.languageData = languageData
             self.gameName = gameName
             self.existingNames = existingNames
             self.data = data
             self.build()  # build the widgets
+        
+        def translate(self, textId:str) -> str:
+            """Returns the appropriate text depending on the language using the language id corresponding with the ones in languages.json"""
+            if textId not in self.languageData:
+                return textId
+            else:
+                translations = self.languageData[textId]
+                if self.language in translations:
+                    return translations[self.language]
+                else:
+                    return translations["en"]
         
         def build(self):
             """Modify the settings of a game or remove it, creates the interface"""
@@ -319,7 +347,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.pathLabel.setWordWrap(True)
             self.infosLayout.addWidget(self.pathLabel)
 
-            self.playButton = Qt.QPushButton(text="PLAY")
+            self.playButton = Qt.QPushButton(text=self.translate("play"))
             self.playButton.setFont(QtGui.QFont("Arial", 24))
             self.playButton.setFixedHeight(60)
             self.infosLayout.addWidget(self.playButton)
@@ -334,12 +362,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.changeNameWidget.setLayout(self.changeNameLayout)
             self.modifyLayout.addWidget(self.changeNameWidget)
 
-            self.changeNameLabel = Qt.QLabel(text="Game name:")
+            self.changeNameLabel = Qt.QLabel(text=self.translate("gameName:"))
             self.changeNameLabel.setFont(QtGui.QFont("Arial", 24))
             self.changeNameLayout.addWidget(self.changeNameLabel)
 
             self.changeNameInput = Qt.QLineEdit()
-            self.changeNameInput.setPlaceholderText("Game name")
+            self.changeNameInput.setPlaceholderText(self.translate("gameName"))
             self.changeNameInput.setText(self.gameName)
             self.changeNameInput.setFont(QtGui.QFont("Arial", 20))
             self.changeNameInput.setFixedHeight(50)
@@ -352,12 +380,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.folderWidget.setLayout(self.folderLayout)
             self.modifyLayout.addWidget(self.folderWidget)
 
-            self.folderLabel = Qt.QLabel(text="Folder path:")
+            self.folderLabel = Qt.QLabel(text=self.translate("folderPath:"))
             self.folderLabel.setFont(QtGui.QFont("Arial", 24))
             self.folderLayout.addWidget(self.folderLabel)
 
             self.folderInput = Qt.QLineEdit()
-            self.folderInput.setPlaceholderText("Folder path")
+            self.folderInput.setPlaceholderText(self.translate("folderPath"))
             self.folderInput.setText(self.data["folder"])
             self.folderInput.setFont(QtGui.QFont("Arial", 20))
             self.folderInput.setFixedHeight(50)
@@ -379,12 +407,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.exeWidget.setLayout(self.exeLayout)
             self.modifyLayout.addWidget(self.exeWidget)
 
-            self.exeLabel = Qt.QLabel(text="Executable path:")
+            self.exeLabel = Qt.QLabel(text=self.translate("executablePath:"))
             self.exeLabel.setFont(QtGui.QFont("Arial", 24))
             self.exeLayout.addWidget(self.exeLabel)
 
             self.exeInput = Qt.QLineEdit()
-            self.exeInput.setPlaceholderText("exe path")
+            self.exeInput.setPlaceholderText(self.translate("executablePath"))
             self.exeInput.setText(self.data["exe"])
             self.exeInput.setFont(QtGui.QFont("Arial", 20))
             self.exeInput.setFixedHeight(50)
@@ -406,7 +434,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerWidget.setLayout(self.bannerLayout)
             self.modifyLayout.addWidget(self.bannerWidget)
 
-            self.bannerButton = Qt.QPushButton(text="Change banner image")
+            self.bannerButton = Qt.QPushButton(text=self.translate("changeBannerImage"))
             self.bannerButton.setFont(QtGui.QFont("Arial", 20))
             self.bannerButton.setFixedHeight(50)
             self.bannerLayout.addWidget(self.bannerButton)
@@ -417,7 +445,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.shortcutWidget.setLayout(self.shortcutLayout)
             self.modifyLayout.addWidget(self.shortcutWidget)
 
-            self.shortcutButton = Qt.QPushButton(text="Add desktop shortcut")
+            self.shortcutButton = Qt.QPushButton(text=self.translate("addDesktopShortcut"))
             self.shortcutButton.setFont(QtGui.QFont("Arial", 20))
             self.shortcutButton.setFixedHeight(50)
             self.shortcutLayout.addWidget(self.shortcutButton)
@@ -428,7 +456,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.removeWidget.setLayout(self.removeLayout)
             self.modifyLayout.addWidget(self.removeWidget)
 
-            self.removeButton = Qt.QPushButton(text="Remove game from library")
+            self.removeButton = Qt.QPushButton(text=self.translate("removeGame"))
             self.removeButton.setStyleSheet("color: red;")
             self.removeButton.setFont(QtGui.QFont("Arial", 20))
             self.removeButton.setFixedHeight(50)
@@ -440,13 +468,13 @@ class IGameLauncher(Qt.QMainWindow):
             self.finishWidget.setLayout(self.finishLayout)
             self.modifyLayout.addWidget(self.finishWidget)
 
-            self.applyButton = Qt.QPushButton(text="Apply")
+            self.applyButton = Qt.QPushButton(text=self.translate("apply"))
             self.applyButton.setStyleSheet("color: green;")
             self.applyButton.setFont(QtGui.QFont("Arial", 20))
             self.applyButton.setFixedHeight(50)
             self.finishLayout.addWidget(self.applyButton)
 
-            self.cancelButton = Qt.QPushButton(text="Cancel")
+            self.cancelButton = Qt.QPushButton(text=self.translate("cancel"))
             self.cancelButton.setFont(QtGui.QFont("Arial", 20))
             self.cancelButton.setFixedHeight(50)
             self.finishLayout.addWidget(self.cancelButton)
@@ -465,7 +493,7 @@ class IGameLauncher(Qt.QMainWindow):
                 self.modifiedData["folder"] = self.folderInput.text()
 
             def askFolder():
-                newFolder = filedialog.askdirectory(title="Select game folder")
+                newFolder = filedialog.askdirectory(title=self.translate("selectGameFolder"))
                 if newFolder:
                     newFolder = newFolder.replace("/", "\\")
                     self.modifiedData["folder"] = newFolder
@@ -475,7 +503,7 @@ class IGameLauncher(Qt.QMainWindow):
                 self.modifiedData["exe"] = self.exeInput.text()
 
             def askExe():
-                newExe = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.modifiedData["folder"], title="Select game executable")
+                newExe = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.modifiedData["folder"], title=self.translate("selectGameExecutable"))
                 if newExe:
                     newExe = newExe.replace("/", "\\")
                     self.modifiedData["exe"] = newExe
@@ -483,7 +511,7 @@ class IGameLauncher(Qt.QMainWindow):
                     self.pathLabel.setText(self.modifiedData["exe"].replace("\\", "\\ "))
 
             def updateBanner():
-                newBannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.modifiedData["folder"], title="Select game image banner")
+                newBannerPath = filedialog.askopenfilename(filetypes=(("image", "*.png *.jpg *.jpeg *.webp"),("all", "*.*")), initialdir=self.modifiedData["folder"], title=self.translate("selectGameImageBanner"))
                 if newBannerPath:
                     self.modifiedData["newBanner"] = True
                     newBanner = Image.open(newBannerPath)
@@ -496,7 +524,7 @@ class IGameLauncher(Qt.QMainWindow):
 
             def remove():
                 validationPopup = Qt.QMessageBox()
-                validationAnswer = validationPopup.warning(self, "Confirm game removal", "This will remove the game from the library (won't delete the actual game files, only the library entry).\nDo you wish to continue?", validationPopup.Yes | validationPopup.Cancel)
+                validationAnswer = validationPopup.warning(self, self.translate("confirmRemoval"), self.translate("confirmRemovalText"), validationPopup.Yes | validationPopup.Cancel)
                 if validationAnswer == validationPopup.Yes:
                     if os.path.exists(f"banners\\{self.gameName}.png"):
                         os.remove(f"banners\\{self.gameName}.png")
@@ -509,16 +537,16 @@ class IGameLauncher(Qt.QMainWindow):
             def apply():
                 if not (self.modifiedData["name"] and self.modifiedData["folder"] and self.modifiedData["exe"]):  # if an entry is missing
                     missingWarning = Qt.QMessageBox()
-                    missingWarning.warning(self, "Missing informations", "Some informations are missing.\nPlease fill every input to proceed.", Qt.QMessageBox.Ok)
+                    missingWarning.warning(self, self.translate("missingInformations"), self.translate("missingInformationsText"), Qt.QMessageBox.Ok)
                 elif not os.path.exists(self.modifiedData["folder"]):
                     missingWarning = Qt.QMessageBox()
-                    missingWarning.warning(self, "Missing folder", "The given game folder doesn't exist.\nPlease enter a valid folder.", Qt.QMessageBox.Ok)
+                    missingWarning.warning(self, self.translate("missingFolder"), self.translate("missingFolderText"), Qt.QMessageBox.Ok)
                 elif not os.path.exists(self.modifiedData["exe"]):
                     missingWarning = Qt.QMessageBox()
-                    missingWarning.warning(self, "Missing executable", "The given game executable file doesn't exist.\nPlease enter a valid file", Qt.QMessageBox.Ok)
+                    missingWarning.warning(self, self.translate("missingExecutable"), self.translate("missingExecutableText"), Qt.QMessageBox.Ok)
                 elif self.modifiedData["name"] in self.existingNames:
                     nameWarning = Qt.QMessageBox()
-                    nameWarning.warning(self, "Duplicate name", "Another game in the library already has that name.\nPlease choose another name.", Qt.QMessageBox.Ok)
+                    nameWarning.warning(self, self.translate("duplicateName"), self.translate("duplicateNameText"), Qt.QMessageBox.Ok)
                 else:
                     if self.modifiedData["name"] != self.gameName:
                         if os.path.exists(f"banners\\{self.gameName}.png"):
@@ -550,12 +578,25 @@ class IGameLauncher(Qt.QMainWindow):
         bigSize = (round(size[0]*1.5), round(size[1]*1.5))
         ratio = size[0]/size[1]
 
-        def __init__(self, gameName:str, gameSettings:dict):
+        def __init__(self, gameName:str, gameSettings:dict, language:str, languageData:dict):
             """Builds a tile for a given game"""
             super().__init__()
+            self.language = language
+            self.languageData = languageData
             self.gameName = gameName
             self.gameSettings = gameSettings
             self.build()
+        
+        def translate(self, textId:str) -> str:
+            """Returns the appropriate text depending on the language using the language id corresponding with the ones in languages.json"""
+            if textId not in self.languageData:
+                return textId
+            else:
+                translations = self.languageData[textId]
+                if self.language in translations:
+                    return translations[self.language]
+                else:
+                    return translations["en"]
         
         def build(self):
             """Builds the tile widget"""
@@ -582,7 +623,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerButton.setIconSize(QtCore.QSize(self.size[0]-6, self.size[1]-6))
             self.mainLayout.addWidget(self.bannerButton)
 
-            self.playButton = Qt.QPushButton(text="PLAY")
+            self.playButton = Qt.QPushButton(text=self.translate("play"))
             self.playButton.setFont(QtGui.QFont("Arial", 24))
             self.playButton.setFixedHeight(60)
             self.mainLayout.addWidget(self.playButton)
@@ -598,7 +639,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.show()  # display the UI
     
     def readData(self):
-        """Reads the session data, or creates an empty file, also creates banners folder if not found"""
+        """Reads the session data, or creates an empty file, also creates banners folder if not found, and get language"""
         if not os.path.exists("data.json"):
             with open("data.json", "w", encoding="utf-8") as dataFile:
                 json.dump({}, dataFile, indent=4)
@@ -606,6 +647,23 @@ class IGameLauncher(Qt.QMainWindow):
             self.data = json.load(dataFile)
         if not os.path.exists("banners"):
             os.mkdir("banners")
+        
+        # determining language
+        windll = ctypes.windll.kernel32
+        self.language = locale.windows_locale[windll.GetUserDefaultUILanguage()].split("_")[0]
+        with open("languages.json", "r", encoding="utf-8") as languageFile:
+            self.languageData = json.load(languageFile)
+    
+    def translate(self, textId:str) -> str:
+        """Returns the appropriate text depending on the language using the language id corresponding with the ones in languages.json"""
+        if textId not in self.languageData:
+            return textId
+        else:
+            translations = self.languageData[textId]
+            if self.language in translations:
+                return translations[self.language]
+            else:
+                return translations["en"]
     
     def writeData(self):
         """Completely overwrite the data in the json file"""
@@ -647,7 +705,7 @@ class IGameLauncher(Qt.QMainWindow):
         
         for game in self.games:
             # creates and add the tiles
-            tile = self.GameTile(game, self.data[game])
+            tile = self.GameTile(game, self.data[game], self.language, self.languageData)
             self.tiles[game] = tile
             self.scrollLayout.addWidget(tile, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
 
@@ -676,7 +734,7 @@ class IGameLauncher(Qt.QMainWindow):
         if exePath:
             if not os.path.exists(exePath):
                 missingWarning = Qt.QMessageBox()
-                missingWarning.warning(self, "Missing game executable", "The game executable file couldn't be found.\nCheck the game settings and set the correct executable path.", Qt.QMessageBox.Ok)
+                missingWarning.warning(self, self.translate("missingGameExecutable"), self.translate("missingGameExecutableText"), Qt.QMessageBox.Ok)
             else:
                 currentDir = os.getcwd()
                 folderToMove = "\\".join(exePath.replace("/", "\\").split("\\")[:-1])
@@ -684,7 +742,7 @@ class IGameLauncher(Qt.QMainWindow):
                 os.startfile(exePath)
                 os.chdir(currentDir)
                 launchConfirm = Qt.QMessageBox()
-                launchConfirm.information(self, "Game launched", "The game was successfully launched!\nIt should open in a few seconds.")
+                launchConfirm.information(self, self.translate("gameLaunched"), self.translate("gameLaunchedText"))
     
     def modifyGame(self, gameName:str):
         """Modify the settings of a game or remove it, creates the interface"""
@@ -704,7 +762,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.reload()
 
         self.clear(self.scrollLayout)
-        self.modifyWidget = self.EditWidget(gameName, self.data[gameName], list(self.data.keys()))
+        self.modifyWidget = self.EditWidget(gameName, self.data[gameName], list(self.data.keys()), self.language, self.languageData)
         self.scrollLayout.addWidget(self.modifyWidget)
         self.modifyWidget.removeSignal.connect(remove)
         self.modifyWidget.cancelButton.clicked.connect(self.reload)
@@ -712,7 +770,7 @@ class IGameLauncher(Qt.QMainWindow):
     
     def askGame(self):
         """Asks to add a new game"""
-        self.askWidget = self.AddWidget(list(self.data.keys()))
+        self.askWidget = self.AddWidget(list(self.data.keys()), self.language, self.languageData)
         self.clear(self.scrollLayout)
         self.scrollLayout.addWidget(self.askWidget)
         self.askWidget.doneSignal.connect(lambda: self.addGame(self.askWidget.gameName, self.askWidget.data))

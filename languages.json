@@ -1,0 +1,138 @@
+{
+    "gameName": {
+        "en": "Game name",
+        "fr": "Nom du jeu"
+    },
+    "enterGameName": {
+        "en": "Enter game name",
+        "fr": "Entrez le nom du jeu"
+    },
+    "gameFolderPath": {
+        "en": "Game folder path",
+        "fr": "Chemin du dossier du jeu"
+    },
+    "gameExecutablePath": {
+        "en": "Game executable path",
+        "fr": "Chemin de l'exécutable du jeu"
+    },
+    "selectGameBanner": {
+        "en": "Select game banner",
+        "fr": "Sélectionner la bannière du jeu"
+    },
+    "done": {
+        "en": "Done",
+        "fr": "Valider"
+    },
+    "cancel": {
+        "en": "Cancel",
+        "fr": "Annuler"
+    },
+    "selectGameFolder": {
+        "en": "Select game folder",
+        "fr": "Sélectionnez le dossier du jeu"
+    },
+    "selectGameExecutable": {
+        "en": "Select game executable",
+        "fr": "Sélectionnez l'exécutable du jeu"
+    },
+    "selectGameImageBanner": {
+        "en": "Select game image banner",
+        "fr": "Sélectionner l'image de bannière du jeu"
+    },
+    "missingInformations": {
+        "en": "Missing informations",
+        "fr": "informations manquantes"
+    },
+    "missingInformationsText": {
+        "en": "Some informations are missing.\nPlease fill every input to proceed.",
+        "fr": "Certaines informations sont manquantes.\nMerci de remplire toutes les entrées pour continuer."
+    },
+    "missingFolder": {
+        "en": "Missing folder",
+        "fr": "Dossier manquant"
+    },
+    "missingFolderText": {
+        "en": "The given game folder doesn't exist.\nPlease enter a valid folder.",
+        "fr": "Le dossier de jeu sélectionné n'existe pas.\nMerci d'entrer un dossier valide."
+    },
+    "missingExecutable": {
+        "en": "Missing executable",
+        "fr": "Exécutable manquant"
+    },
+    "missingExecutableText": {
+        "en": "The given game executable file doesn't exist.\nPlease enter a valid file",
+        "fr": "Le fichier exécutable du jeu entré n'existe pas.\nMerci d'entrer un fichier valide."
+    },
+    "duplicateName": {
+        "en": "Duplicate name",
+        "fr": "Nom en double"
+    },
+    "duplicateNameText": {
+        "en": "Another game in the library already has that name.\nPlease choose another name.",
+        "fr": "Un autre jeu dans la librairie possède déjà ce nom.\nMerci de choisir un autre nom."
+    },
+    "play": {
+        "en": "PLAY",
+        "fr": "JOUER"
+    },
+    "gameName:": {
+        "en": "Game name:",
+        "fr": "Nom du jeu :"
+    },
+    "folderPath:": {
+        "en": "Folder path:",
+        "fr": "Chemin du dossier :"
+    },
+    "folderPath": {
+        "en": "Folder path",
+        "fr": "Chemin du dossier"
+    },
+    "executablePath:": {
+        "en": "Executable path:",
+        "fr": "Chemin de l'exécutable :"
+    },
+    "executablePath": {
+        "en": "Executable path",
+        "fr": "Chemin de l'exécutable"
+    },
+    "changeBannerImage": {
+        "en": "Change banner image",
+        "fr": "Changer l'image de la bannière"
+    },
+    "addDesktopShortcut": {
+        "en": "Add desktop shortcut",
+        "fr": "Ajouter un raccourcis sur le bureau"
+    },
+    "removeGame": {
+        "en": "Remove game from library",
+        "fr": "Retirer le jeu de la librairie"
+    },
+    "apply": {
+        "en": "Apply",
+        "fr": "Appliquer"
+    },
+    "confirmRemoval": {
+        "en": "Confirm game removal",
+        "fr": "Confirmer le retrait du jeu"
+    },
+    "confirmRemovalText": {
+        "en": "This will remove the game from the library (won't delete the actual game files, only the library entry).\nDo you wish to continue?",
+        "fr": "Cette action retirera le jeu de la librairie (ne supprimera pas les fichiers du jeu, seulement l'entrée dans la librairie).\nSouhaitez-vous continuer ?"
+    },
+    "missingGameExecutable": {
+        "en": "Missing game executable",
+        "fr": "Exécutable du jeu manquant"
+    },
+    "missingGameExecutableText": {
+        "en": "The game executable file couldn't be found.\nCheck the game settings and set the correct executable path.",
+        "fr": "Le fichier exécutable du jeu n'a pas pu être trouvé.\nVérifiez les paramètres du jeu et entrez le chemin correct vers l'exécutable."
+    },
+    "gameLaunched": {
+        "en": "Game launched",
+        "fr": "Jeu lancé"
+    },
+    "gameLaunchedText": {
+        "en": "The game was successfully launched!\nIt should open in a few seconds.",
+        "fr": "Le jeu a été lancé avec succès !\nIl devrais s'ouvrir d'ici quelques secondes."
+    }
+}
