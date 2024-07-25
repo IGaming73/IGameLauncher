@@ -1,6 +1,7 @@
 import PIL.JpegImagePlugin
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import pyqtSignal  # signals
 from PIL import Image  # image processing
 from PIL.JpegImagePlugin import JpegImageFile as ImageFile  # image object
 import functools  # tool to represent functions with arguments
@@ -242,6 +243,7 @@ class IGameLauncher(Qt.QMainWindow):
 
     class EditWidget(Qt.QWidget):
         """A widget to edit games"""
+        removeSignal = pyqtSignal()
 
         def __init__(self, gameName, data):
             super().__init__()
@@ -475,8 +477,12 @@ class IGameLauncher(Qt.QMainWindow):
                 self.modifiedData["createShortcut"] = True
 
             def remove():
-                if os.path.exists(f"banners\\{self.gameName}.png"):
-                    os.remove(f"banners\\{self.gameName}.png")
+                validationPopup = Qt.QMessageBox()
+                validationAnswer = validationPopup.warning(self, "Confirm game removal", "This will remove the game from the library (won't delete the actual game files, only the library entry).\nDo you wish to continue?", validationPopup.Yes | validationPopup.Cancel)
+                if validationAnswer == validationPopup.Yes:
+                    if os.path.exists(f"banners\\{self.gameName}.png"):
+                        os.remove(f"banners\\{self.gameName}.png")
+                    self.removeSignal.emit()
 
             def cancel():
                 if os.path.exists("banners\\banner.png"):
@@ -591,6 +597,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.nbColumns = int(Qt.QApplication.desktop().screenGeometry().width() / ((self.GameTile.size[0] + 26)))  # number of columns for the tiles
         self.currentLine, self.currentColumn = 0, 0
         self.tiles = {}
+        self.games = sorted(list(self.data.keys()))
 
         self.centralWidget = Qt.QWidget()
         self.setCentralWidget(self.centralWidget)
@@ -606,9 +613,9 @@ class IGameLauncher(Qt.QMainWindow):
         self.scrollInnerWidget.setLayout(self.scrollLayout)
         self.mainLayout.addWidget(self.scrollZone)
         
-        for game, settings in self.data.items():
+        for game in self.games:
             # creates and add the tiles
-            tile = self.GameTile(game, settings)
+            tile = self.GameTile(game, self.data[game])
             self.tiles[game] = tile
             self.scrollLayout.addWidget(tile, self.currentLine, self.currentColumn, alignment=QtCore.Qt.AlignCenter)
 
@@ -661,7 +668,7 @@ class IGameLauncher(Qt.QMainWindow):
         self.clear(self.scrollLayout)
         self.modifyWidget = self.EditWidget(gameName, self.data[gameName])
         self.scrollLayout.addWidget(self.modifyWidget)
-        self.modifyWidget.removeButton.clicked.connect(remove)
+        self.modifyWidget.removeSignal.connect(remove)
         self.modifyWidget.cancelButton.clicked.connect(self.reload)
         self.modifyWidget.applyButton.clicked.connect(apply)
     
