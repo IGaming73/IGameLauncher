@@ -1,7 +1,7 @@
 import PIL.JpegImagePlugin
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import pyqtSignal  # signals
+from PyQt5.QtCore import QThread, pyqtSignal  # threads and signals
 from PIL import Image  # image processing
 from PIL.JpegImagePlugin import JpegImageFile as ImageFile  # image object
 import functools  # tool to represent functions with arguments
@@ -17,14 +17,16 @@ from tkinter import filedialog  # file choosing ui
 
 class IGameLauncher(Qt.QMainWindow):
     """Main UI for the game launcher app"""
-
+    
     class AddWidget(Qt.QWidget):
         """A widget to add a game"""
         defaultName = "Game name"
+        doneSignal = pyqtSignal()
 
-        def __init__(self):
+        def __init__(self, existingNames):
             super().__init__()
             self.gameName = self.defaultName
+            self.existingNames = existingNames
             self.data = {"folder": None, "exe": None}
             self.build()  # build the widgets
             self.setup()
@@ -237,17 +239,33 @@ class IGameLauncher(Qt.QMainWindow):
         
         def done(self):
             """When the done button is clicked"""
-            if os.path.exists("banners\\banner.png"):
-                os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
+            if not (self.gameName and self.data["folder"] and self.data["exe"]):  # if an entry is missing
+                missingWarning = Qt.QMessageBox()
+                missingWarning.warning(self, "Missing informations", "Some informations are missing.\nPlease fill every input to proceed.", Qt.QMessageBox.Ok)
+            elif not os.path.exists(self.data["folder"]):
+                missingWarning = Qt.QMessageBox()
+                missingWarning.warning(self, "Missing folder", "The given game folder doesn't exist.\nPlease enter a valid folder.", Qt.QMessageBox.Ok)
+            elif not os.path.exists(self.data["exe"]):
+                missingWarning = Qt.QMessageBox()
+                missingWarning.warning(self, "Missing executable", "The given game executable file doesn't exist.\nPlease enter a valid file", Qt.QMessageBox.Ok)
+            elif self.gameName in self.existingNames:
+                nameWarning = Qt.QMessageBox()
+                nameWarning.warning(self, "Duplicate name", "Another game in the library already has that name.\nPlease choose another name.", Qt.QMessageBox.Ok)
+            else:
+                if os.path.exists("banners\\banner.png"):
+                    os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
+                self.doneSignal.emit()
     
 
     class EditWidget(Qt.QWidget):
         """A widget to edit games"""
         removeSignal = pyqtSignal()
+        applySignal = pyqtSignal()
 
-        def __init__(self, gameName, data):
+        def __init__(self, gameName, data, existingNames):
             super().__init__()
             self.gameName = gameName
+            self.existingNames = existingNames
             self.data = data
             self.build()  # build the widgets
         
@@ -489,15 +507,29 @@ class IGameLauncher(Qt.QMainWindow):
                     os.remove("banners\\banner.png")
 
             def apply():
-                if self.modifiedData["name"] != self.gameName:
-                    if os.path.exists(f"banners\\{self.gameName}.png"):
-                        os.rename(f"banners\\{self.gameName}.png", f"banners\\{self.modifiedData["name"]}.png")
-                if self.modifiedData["newBanner"]:
-                    if os.path.exists(f"banners\\{self.modifiedData["name"]}.png"):
-                        os.remove(f"banners\\{self.modifiedData["name"]}.png")
-                    os.rename("banners\\banner.png", f"banners\\{self.modifiedData["name"]}.png")
-                if self.modifiedData["createShortcut"]:
-                    pyshortcuts.make_shortcut(script=self.modifiedData["exe"], executable=self.modifiedData["exe"], name=self.modifiedData["name"], working_dir="\\".join(self.modifiedData["exe"].split("\\")[:-1]), desktop=True, startmenu=False, icon=self.modifiedData["exe"])
+                if not (self.modifiedData["name"] and self.modifiedData["folder"] and self.modifiedData["exe"]):  # if an entry is missing
+                    missingWarning = Qt.QMessageBox()
+                    missingWarning.warning(self, "Missing informations", "Some informations are missing.\nPlease fill every input to proceed.", Qt.QMessageBox.Ok)
+                elif not os.path.exists(self.modifiedData["folder"]):
+                    missingWarning = Qt.QMessageBox()
+                    missingWarning.warning(self, "Missing folder", "The given game folder doesn't exist.\nPlease enter a valid folder.", Qt.QMessageBox.Ok)
+                elif not os.path.exists(self.modifiedData["exe"]):
+                    missingWarning = Qt.QMessageBox()
+                    missingWarning.warning(self, "Missing executable", "The given game executable file doesn't exist.\nPlease enter a valid file", Qt.QMessageBox.Ok)
+                elif self.modifiedData["name"] in self.existingNames:
+                    nameWarning = Qt.QMessageBox()
+                    nameWarning.warning(self, "Duplicate name", "Another game in the library already has that name.\nPlease choose another name.", Qt.QMessageBox.Ok)
+                else:
+                    if self.modifiedData["name"] != self.gameName:
+                        if os.path.exists(f"banners\\{self.gameName}.png"):
+                            os.rename(f"banners\\{self.gameName}.png", f"banners\\{self.modifiedData["name"]}.png")
+                    if self.modifiedData["newBanner"]:
+                        if os.path.exists(f"banners\\{self.modifiedData["name"]}.png"):
+                            os.remove(f"banners\\{self.modifiedData["name"]}.png")
+                        os.rename("banners\\banner.png", f"banners\\{self.modifiedData["name"]}.png")
+                    if self.modifiedData["createShortcut"]:
+                        pyshortcuts.make_shortcut(script=self.modifiedData["exe"], executable=self.modifiedData["exe"], name=self.modifiedData["name"], working_dir="\\".join(self.modifiedData["exe"].split("\\")[:-1]), desktop=True, startmenu=False, icon=self.modifiedData["exe"])
+                    self.applySignal.emit()
             
             self.modifiedData = {"name":self.gameName, "folder":self.data["folder"], "exe":self.data["exe"], "newBanner":False, "createShortcut":False}
             self.changeNameInput.textEdited.connect(updateName)
@@ -642,11 +674,17 @@ class IGameLauncher(Qt.QMainWindow):
     def launchGame(self, exePath:str):
         """Launches the given exe file"""
         if exePath:
-            currentDir = os.getcwd()
-            folderToMove = "\\".join(exePath.replace("/", "\\").split("\\")[:-1])
-            os.chdir(folderToMove)
-            os.startfile(exePath)
-            os.chdir(currentDir)
+            if not os.path.exists(exePath):
+                missingWarning = Qt.QMessageBox()
+                missingWarning.warning(self, "Missing game executable", "The game executable file couldn't be found.\nCheck the game settings and set the correct executable path.", Qt.QMessageBox.Ok)
+            else:
+                currentDir = os.getcwd()
+                folderToMove = "\\".join(exePath.replace("/", "\\").split("\\")[:-1])
+                os.chdir(folderToMove)
+                os.startfile(exePath)
+                os.chdir(currentDir)
+                launchConfirm = Qt.QMessageBox()
+                launchConfirm.information(self, "Game launched", "The game was successfully launched!\nIt should open in a few seconds.")
     
     def modifyGame(self, gameName:str):
         """Modify the settings of a game or remove it, creates the interface"""
@@ -666,18 +704,18 @@ class IGameLauncher(Qt.QMainWindow):
             self.reload()
 
         self.clear(self.scrollLayout)
-        self.modifyWidget = self.EditWidget(gameName, self.data[gameName])
+        self.modifyWidget = self.EditWidget(gameName, self.data[gameName], list(self.data.keys()))
         self.scrollLayout.addWidget(self.modifyWidget)
         self.modifyWidget.removeSignal.connect(remove)
         self.modifyWidget.cancelButton.clicked.connect(self.reload)
-        self.modifyWidget.applyButton.clicked.connect(apply)
+        self.modifyWidget.applySignal.connect(apply)
     
     def askGame(self):
         """Asks to add a new game"""
-        self.askWidget = self.AddWidget()
+        self.askWidget = self.AddWidget(list(self.data.keys()))
         self.clear(self.scrollLayout)
         self.scrollLayout.addWidget(self.askWidget)
-        self.askWidget.doneButton.clicked.connect(lambda: self.addGame(self.askWidget.gameName, self.askWidget.data))
+        self.askWidget.doneSignal.connect(lambda: self.addGame(self.askWidget.gameName, self.askWidget.data))
         self.askWidget.cancelButton.clicked.connect(self.reload)
 
     def addGame(self, name:str, data:dict):
