@@ -1,4 +1,3 @@
-import PIL.JpegImagePlugin
 import PyQt5.QtWidgets as Qt  # interface
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QThread, pyqtSignal  # threads and signals
@@ -31,7 +30,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.defaultName = self.translate("gameName")
             self.gameName = self.defaultName
             self.existingNames = existingNames
-            self.data = {"folder": None, "exe": None}
+            self.data = {"folder": None, "exe": None, "version":None}
             self.build()  # build the widgets
             self.setup()
         
@@ -83,6 +82,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.nameLabel.setWordWrap(True)
             self.leftLayout.addWidget(self.nameLabel)
 
+            self.versionLabel = Qt.QLabel(text="v")
+            self.versionLabel.setFont(QtGui.QFont("Arial", 20))
+            self.versionLabel.setAlignment(QtCore.Qt.AlignCenter)
+            self.versionLabel.setWordWrap(True)
+            self.leftLayout.addWidget(self.versionLabel)
+
             self.pathLabel = Qt.QLabel()
             self.pathLabel.setFont(QtGui.QFont("Arial", 16))
             self.pathLabel.setAlignment(QtCore.Qt.AlignCenter)
@@ -105,6 +110,18 @@ class IGameLauncher(Qt.QMainWindow):
             self.nameInput.setFont(QtGui.QFont("Arial", 20))
             self.nameLayout.addWidget(self.nameInput)
             self.nameLayout.addStretch()
+
+            self.versionWidget = Qt.QWidget()
+            self.versionLayout = Qt.QHBoxLayout()
+            self.versionWidget.setLayout(self.versionLayout)
+            self.rightLayout.addWidget(self.versionWidget)
+
+            self.versionInput = Qt.QLineEdit()
+            self.versionInput.setPlaceholderText(self.translate("version"))
+            self.versionInput.setFixedHeight(50)
+            self.versionInput.setFont(QtGui.QFont("Arial", 20))
+            self.versionLayout.addWidget(self.versionInput)
+            self.versionLayout.addStretch()
 
             self.folderWidget = Qt.QWidget()
             self.folderLayout = Qt.QHBoxLayout()
@@ -179,6 +196,7 @@ class IGameLauncher(Qt.QMainWindow):
         def setup(self):
             """Setup every widget"""
             self.nameInput.textEdited.connect(self.updateName)
+            self.versionInput.textEdited.connect(self.updateVersion)
             self.folderInput.textEdited.connect(self.updateFolder)
             self.folderButton.clicked.connect(self.selectFolder)
             self.exeInput.textEdited.connect(self.updateExe)
@@ -186,6 +204,11 @@ class IGameLauncher(Qt.QMainWindow):
             self.bannerButton.clicked.connect(self.askBanner)
             self.cancelButton.clicked.connect(self.cancel)
             self.doneButton.clicked.connect(self.done)
+        
+        def updateVersion(self):
+            """Updates the game version"""
+            self.data["version"] = self.versionInput.text()
+            self.versionLabel.setText(f"v{self.data["version"]}")
         
         def selectFolder(self):
             """Select the game folder"""
@@ -254,7 +277,7 @@ class IGameLauncher(Qt.QMainWindow):
         
         def done(self):
             """When the done button is clicked"""
-            if not (self.gameName and self.data["folder"] and self.data["exe"]):  # if an entry is missing
+            if not (self.gameName and self.data["folder"] and self.data["exe"] and self.data["version"]):  # if an entry is missing
                 missingWarning = Qt.QMessageBox()
                 missingWarning.warning(self, self.translate("missingInformations"), self.translate("missingInformationsText"), Qt.QMessageBox.Ok)
             elif not os.path.exists(self.data["folder"]):
@@ -269,6 +292,7 @@ class IGameLauncher(Qt.QMainWindow):
             else:
                 if os.path.exists("banners\\banner.png"):
                     os.rename("banners\\banner.png", f"banners\\{self.gameName}.png")
+                os.mkdir(f"versions\\{self.gameName}")
                 self.doneSignal.emit()
     
 
@@ -338,6 +362,12 @@ class IGameLauncher(Qt.QMainWindow):
             self.nameLabel.setWordWrap(True)
             self.infosLayout.addWidget(self.nameLabel)
 
+            self.versionLabel = Qt.QLabel(text=f"v{self.data['version']}")
+            self.versionLabel.setFont(QtGui.QFont("Arial", 20))
+            self.versionLabel.setAlignment(QtCore.Qt.AlignCenter)
+            self.versionLabel.setWordWrap(True)
+            self.infosLayout.addWidget(self.versionLabel)
+
             path = self.data["exe"]
             if path:
                 self.pathLabel = Qt.QLabel(text=path.replace("\\", "\\ "))
@@ -375,6 +405,22 @@ class IGameLauncher(Qt.QMainWindow):
             self.changeNameLayout.addWidget(self.changeNameInput)
 
             self.changeNameLayout.addStretch()
+
+            self.versionWidget = Qt.QWidget()
+            self.versionLayout = Qt.QHBoxLayout()
+            self.versionWidget.setLayout(self.versionLayout)
+            self.modifyLayout.addWidget(self.versionWidget)
+
+            self.versionEditLabel = Qt.QLabel(text=self.translate("version:"))
+            self.versionEditLabel.setFont(QtGui.QFont("Arial", 24))
+            self.versionLayout.addWidget(self.versionEditLabel)
+
+            self.versionInput = Qt.QLineEdit(text=self.data["version"])
+            self.versionInput.setPlaceholderText(self.translate("version"))
+            self.versionInput.setFont(QtGui.QFont("Arial", 20))
+            self.versionInput.setFixedHeight(50)
+            self.versionLayout.addWidget(self.versionInput)
+            self.versionLayout.addStretch()
 
             self.folderWidget = Qt.QWidget()
             self.folderLayout = Qt.QHBoxLayout()
@@ -502,6 +548,10 @@ class IGameLauncher(Qt.QMainWindow):
 
             def updateExe():
                 self.modifiedData["exe"] = self.exeInput.text()
+            
+            def updateVersion():
+                self.modifiedData["version"] = self.versionInput.text()
+                self.versionLabel.setText(f"v{self.modifiedData['version']}")
 
             def askExe():
                 newExe = filedialog.askopenfilename(filetypes=(("application", "*.exe"),("all", "*.*")), initialdir=self.modifiedData["folder"], title=self.translate("selectGameExecutable"))
@@ -536,7 +586,7 @@ class IGameLauncher(Qt.QMainWindow):
                     os.remove("banners\\banner.png")
 
             def apply():
-                if not (self.modifiedData["name"] and self.modifiedData["folder"] and self.modifiedData["exe"]):  # if an entry is missing
+                if not (self.modifiedData["name"] and self.modifiedData["folder"] and self.modifiedData["exe"] and self.modifiedData["version"]):  # if an entry is missing
                     missingWarning = Qt.QMessageBox()
                     missingWarning.warning(self, self.translate("missingInformations"), self.translate("missingInformationsText"), Qt.QMessageBox.Ok)
                 elif not os.path.exists(self.modifiedData["folder"]):
@@ -560,8 +610,9 @@ class IGameLauncher(Qt.QMainWindow):
                         pyshortcuts.make_shortcut(script=self.modifiedData["exe"], executable=self.modifiedData["exe"], name=self.modifiedData["name"], working_dir="\\".join(self.modifiedData["exe"].split("\\")[:-1]), desktop=True, startmenu=False, icon=self.modifiedData["exe"])
                     self.applySignal.emit()
             
-            self.modifiedData = {"name":self.gameName, "folder":self.data["folder"], "exe":self.data["exe"], "newBanner":False, "createShortcut":False}
+            self.modifiedData = {"name":self.gameName, "folder":self.data["folder"], "exe":self.data["exe"], "version":self.data["version"], "newBanner":False, "createShortcut":False}
             self.changeNameInput.textEdited.connect(updateName)
+            self.versionInput.textEdited.connect(updateVersion)
             self.folderInput.textEdited.connect(updateFolder)
             self.folderButton.clicked.connect(askFolder)
             self.exeInput.textEdited.connect(updateExe)
@@ -759,6 +810,7 @@ class IGameLauncher(Qt.QMainWindow):
                 self.data[self.modifyWidget.modifiedData["name"]] = oldData
             self.data[self.modifyWidget.modifiedData["name"]]["folder"] = self.modifyWidget.modifiedData["folder"]
             self.data[self.modifyWidget.modifiedData["name"]]["exe"] = self.modifyWidget.modifiedData["exe"]
+            self.data[self.modifyWidget.modifiedData["name"]]["version"] = self.modifyWidget.modifiedData["version"]
             self.writeData()
             self.reload()
 

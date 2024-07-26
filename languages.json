@@ -134,5 +134,13 @@
     "gameLaunchedText": {
         "en": "The game was successfully launched!\nIt should open in a few seconds.",
         "fr": "Le jeu a été lancé avec succès !\nIl devrais s'ouvrir d'ici quelques secondes."
+    },
+    "version": {
+        "en": "Version",
+        "fr": "Version"
+    },
+    "version:": {
+        "en": "Version:",
+        "fr": "Version :"
     }
 }
