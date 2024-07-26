@@ -283,6 +283,7 @@ class IGameLauncher(Qt.QMainWindow):
             self.languageData = languageData
             self.gameName = gameName
             self.existingNames = existingNames
+            self.existingNames.remove(self.gameName)
             self.data = data
             self.build()  # build the widgets
         
